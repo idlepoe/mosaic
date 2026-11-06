@@ -383,7 +383,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onPressed: () => showAboutDialog(
               context: context,
               applicationName: 'Mosaic Android',
-              applicationVersion: '1.3.0',
+              applicationVersion: '1.3.1',
               children: [Text(tr('aFlutterPortInspiredByMosaic'))],
             ),
           ),
@@ -512,13 +512,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             StudioButton(
               onPressed: busy || picking ? null : _pick,
               icon: Icon(Icons.add_rounded),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 13),
-                child: Text(
-                  picking
-                      ? tr('analyzingVideos')
-                      : tr('selectVideosFromGallery'),
-                ),
+              child: Text(
+                picking ? tr('analyzingVideos') : tr('selectVideosFromGallery'),
               ),
             ),
             Align(
@@ -641,15 +636,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ? null
                   : _start,
               icon: Icon(busy ? Icons.stop_rounded : Icons.auto_awesome),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 13),
-                child: Text(
-                  busy
-                      ? tr('cancel', [(progress * 100).round()])
-                      : queue.isEmpty
-                      ? tr('selectAVideoFirst')
-                      : tr('createFromVideoS', [queue.length]),
-                ),
+              child: Text(
+                busy
+                    ? tr('cancel', [(progress * 100).round()])
+                    : queue.isEmpty
+                    ? tr('selectAVideoFirst')
+                    : tr('createFromVideoS', [queue.length]),
               ),
             ),
           ],

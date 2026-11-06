@@ -28,30 +28,39 @@ class StudioButton extends StatelessWidget {
       ],
     );
     if (ghost) {
-      return ShadButton.ghost(
-        onPressed: onPressed,
-        enabled: onPressed != null,
-        height: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        child: Flexible(child: content),
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40),
+        child: ShadButton.ghost(
+          onPressed: onPressed,
+          enabled: onPressed != null,
+          height: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Flexible(child: content),
+        ),
       );
     }
     if (outline) {
-      return ShadButton.outline(
-        onPressed: onPressed,
-        enabled: onPressed != null,
-        height: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Flexible(child: content),
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40),
+        child: ShadButton.outline(
+          onPressed: onPressed,
+          enabled: onPressed != null,
+          height: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Flexible(child: content),
+        ),
       );
     }
-    return ShadButton(
-      onPressed: onPressed,
-      enabled: onPressed != null,
-      backgroundColor: color,
-      height: 0,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Flexible(child: content),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 44),
+      child: ShadButton(
+        onPressed: onPressed,
+        enabled: onPressed != null,
+        backgroundColor: color,
+        height: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Flexible(child: content),
+      ),
     );
   }
 }
@@ -71,20 +80,23 @@ class StudioChoice extends StatelessWidget {
     final c = ShadTheme.of(context).colorScheme;
     return Semantics(
       selected: selected,
-      child: ShadButton.outline(
-        onPressed: onSelected == null ? null : () => onSelected!(!selected),
-        enabled: onSelected != null,
-        backgroundColor: selected ? c.secondary : c.card,
-        foregroundColor: selected ? c.primary : c.foreground,
-        decoration: ShadDecoration(
-          border: ShadBorder.all(
-            color: selected ? c.primary : c.border,
-            radius: BorderRadius.circular(8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40),
+        child: ShadButton.outline(
+          onPressed: onSelected == null ? null : () => onSelected!(!selected),
+          enabled: onSelected != null,
+          backgroundColor: selected ? c.secondary : c.card,
+          foregroundColor: selected ? c.primary : c.foreground,
+          decoration: ShadDecoration(
+            border: ShadBorder.all(
+              color: selected ? c.primary : c.border,
+              radius: BorderRadius.circular(8),
+            ),
           ),
+          height: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Flexible(child: label),
         ),
-        height: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Flexible(child: label),
       ),
     );
   }

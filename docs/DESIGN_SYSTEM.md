@@ -73,3 +73,16 @@ Both debug and ARM64 release APKs built successfully. The release APK reports
 certificate. Devices already using that release certificate can update normally;
 the older development-signed installation on this test phone cannot be updated
 in place with that APK.
+
+
+## Compact buttons (1.3.1)
+
+Removed the duplicate 13 px top/bottom label padding from gallery selection and
+generation actions. Shared primary button content padding is now 10 px vertically,
+and ghost, outline, and choice buttons use 8 px. Primary buttons have a 44 logical
+pixel minimum height; supporting and choice buttons have a 40 pixel minimum.
+Heights remain flexible for wrapped translations and enlarged text. Button colors,
+selection behavior, and generation logic are unchanged.
+
+Flutter analysis and the existing 33-test suite passed, including 160% text in
+both light and dark mode.
