@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ffmpeg_kit_flutter_new_full/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_full/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_full/return_code.dart';
@@ -12,6 +13,20 @@ import 'package:path_provider/path_provider.dart';
 import 'models.dart';
 
 class JobCancelled implements Exception {}
+
+String frameFilter(VideoMetadata m, Settings s, int width, int height) {
+  final factor = s.effectiveCrop
+      ? math.max(width / m.width, height / m.height)
+      : math.min(width / m.width, height / m.height);
+  int dimension(double n) =>
+      math.max(2, s.effectiveCrop ? (n / 2).ceil() * 2 : (n / 2).floor() * 2);
+  final scaledWidth = dimension(m.width * factor),
+      scaledHeight = dimension(m.height * factor);
+  final fit = s.effectiveCrop
+      ? 'crop=$width:$height:(iw-ow)/2:(ih-oh)/2'
+      : 'pad=$width:$height:(ow-iw)/2:(oh-ih)/2:color=${s.dark ? '0x111827' : '0xf4f5f7'}';
+  return 'scale=$scaledWidth:$scaledHeight,setsar=1,$fit';
+}
 
 /// Sequential native sessions bound memory use and allow cancellation between steps.
 class MosaicProcessor {
@@ -32,7 +47,7 @@ class MosaicProcessor {
     if (id != null) await FFmpegKit.cancel(id);
   }
 
-  Future<void> run(List<String> args) async {
+  Future<String> run(List<String> args) async {
     checkCancelled();
     final finished = Completer<void>();
     final session = await FFmpegKit.executeWithArgumentsAsync(
@@ -76,6 +91,7 @@ class MosaicProcessor {
     try {
       await completion;
       checkCancelled();
+      return await session.getOutput() ?? '';
     } finally {
       _sessionId = null;
     }
@@ -97,50 +113,121 @@ class MosaicProcessor {
       throw Exception('동영상 정보를 읽지 못했습니다. 파일 형식을 확인하세요.');
     }
     final raw = await session.getOutput() ?? '{}';
-    final j = jsonDecode(raw) as Map<String, dynamic>;
-    final streams = (j['streams'] as List).cast<Map<String, dynamic>>();
-    final videos = streams.where(
-      (s) =>
-          s['codec_type'] == 'video' &&
-          (s['disposition']?['attached_pic'] ?? 0) != 1,
+    final json = jsonDecode(raw) as Map<String, dynamic>;
+    final streams = (json['streams'] as List? ?? []).whereType<Map>();
+    final video = streams
+        .where(
+          (s) =>
+              s['codec_type'] == 'video' &&
+              (s['disposition']?['attached_pic'] ?? 0) != 1,
+        )
+        .firstOrNull;
+    if (video != null) {
+      final side = (video['side_data_list'] as List? ?? []).whereType<Map>();
+      if (!side.any((data) => data['rotation'] != null) &&
+          video['tags']?['rotate'] == null) {
+        int? rotation;
+        try {
+          rotation = await const MethodChannel(
+            'mosaic/media',
+          ).invokeMethod<int>('rotation', {'path': path});
+        } on PlatformException {
+          /* Some containers are unsupported by Android. */
+        } on MissingPluginException {
+          /* Non-Android test hosts can use FFmpeg. */
+        }
+        if (rotation != null) {
+          json['mosaic_android_rotation'] = rotation;
+        } else {
+          // FFprobeKit can omit side_data_list. Measure one decoded frame
+          // after FFmpeg autorotation instead of assuming encoded dimensions.
+          final logs = await run([
+            '-loglevel',
+            'info',
+            '-i',
+            path,
+            '-map',
+            '0:${video['index'] ?? 0}',
+            '-frames:v',
+            '1',
+            '-vf',
+            'showinfo',
+            '-an',
+            '-f',
+            'null',
+            '-',
+          ]);
+          final match = RegExp(
+            r'sar:(\d+)/(\d+)\s+s:(\d+)x(\d+)',
+          ).firstMatch(logs);
+          if (match != null) {
+            final sar =
+                int.parse(match[1]!) / math.max(1, int.parse(match[2]!));
+            json['mosaic_display_width'] = (int.parse(match[3]!) * sar).round();
+            json['mosaic_display_height'] = int.parse(match[4]!);
+          }
+        }
+      }
+    }
+    checkCancelled();
+    return parseVideoMetadata(json);
+  }
+
+  Future<String> createThumbnail(String source, VideoMetadata m) async {
+    checkCancelled();
+    final dir = await Directory(
+      p.join((await getTemporaryDirectory()).path, 'mosaic_thumbnails'),
+    ).create(recursive: true);
+    final output = p.join(
+      dir.path,
+      '${DateTime.now().microsecondsSinceEpoch}.jpg',
     );
-    if (videos.isEmpty) throw Exception('영상 트랙이 없는 파일입니다.');
-    final v = videos.first;
-    final duration =
-        double.tryParse('${j['format']?['duration'] ?? v['duration']}') ?? 0;
-    if (!duration.isFinite || duration <= 0) {
-      throw Exception('길이를 확인할 수 없는 영상은 지원하지 않습니다.');
-    }
-    double width = (v['width'] as num?)?.toDouble() ?? 0;
-    double height = (v['height'] as num?)?.toDouble() ?? 0;
-    final sar = '${v['sample_aspect_ratio'] ?? '1:1'}'.split(':');
-    if (sar.length == 2) {
-      final a = double.tryParse(sar[0]) ?? 1, b = double.tryParse(sar[1]) ?? 1;
-      if (a > 0 && b > 0) width *= a / b;
-    }
-    final side = (v['side_data_list'] as List? ?? []).whereType<Map>();
-    final rotation =
-        side.where((s) => s['rotation'] != null).firstOrNull?['rotation'] ??
-        v['tags']?['rotate'] ??
-        0;
-    if ((double.tryParse('$rotation') ?? 0).abs() % 180 == 90) {
-      final t = width;
-      width = height;
-      height = t;
-    }
-    if (width <= 0 || height <= 0) throw Exception('영상 크기가 올바르지 않습니다.');
-    return VideoMetadata(
-      duration,
-      width.round(),
-      height.round(),
-      '${v['codec_name'] ?? 'unknown'}',
-      '${v['color_transfer'] ?? ''}',
-      const JsonEncoder.withIndent('  ').convert(j),
-      streamIndex: (v['index'] as num?)?.toInt() ?? 0,
-      dolbyVision: side.any(
-        (s) => '${s['side_data_type']}'.toLowerCase().contains('dovi'),
-      ),
+    final factor = math.min(1.0, math.min(256 / m.width, 384 / m.height));
+    final width = math.max(2, (m.width * factor).floor() ~/ 2 * 2);
+    final height = math.max(2, (m.height * factor).floor() ~/ 2 * 2);
+    final time = math.min(
+      m.duration * .1,
+      math.max(0.0, m.duration - m.frameSeconds),
     );
+    try {
+      final tone = await _tone(m);
+      await run([
+        '-ss',
+        time.toStringAsFixed(6),
+        '-i',
+        source,
+        '-map',
+        '0:${m.streamIndex}',
+        '-an',
+        '-frames:v',
+        '1',
+        '-vf',
+        '$tone${frameFilter(m, Settings(), width, height)}',
+        '-q:v',
+        '5',
+        output,
+      ]);
+      if (!await File(output).exists()) {
+        throw const FormatException('미리보기 프레임을 추출하지 못했습니다.');
+      }
+      return output;
+    } catch (_) {
+      final file = File(output);
+      if (await file.exists()) await file.delete();
+      rethrow;
+    }
+  }
+
+  Future<void> clearQueueCache(QueueItem item) async {
+    final cache = (await getTemporaryDirectory()).path;
+    for (final path in [item.thumbnailPath, item.path]) {
+      if (path != null &&
+          (p.isWithin(p.join(cache, 'mosaic_thumbnails'), path) ||
+              p.isWithin(p.join(cache, 'mosaic_imports'), path))) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
+    }
   }
 
   Future<String> _tone(VideoMetadata m) async {
@@ -189,28 +276,12 @@ class MosaicProcessor {
         final local = <String>[];
         final animated =
             kind == OutputKind.reel || kind == OutputKind.animatedSheet;
-        if (kind == OutputKind.animatedSheet && s.columns * s.rows > 9) {
-          throw Exception('움직이는 썸네일 모음은 메모리 사용을 줄이기 위해 최대 9칸입니다. 행·열을 줄여 주세요.');
-        }
-        final count =
-            kind == OutputKind.sheet || kind == OutputKind.animatedSheet
-            ? s.columns * s.rows
-            : s.count;
-        final clip = math.min(s.clipSeconds, m.duration);
-        final times = sampleTimes(m.duration, count, clip: animated ? clip : 0);
-        final cellWidth =
-            kind == OutputKind.sheet || kind == OutputKind.animatedSheet
-            ? ((s.width - s.gap * (s.columns + 1)) ~/ s.columns) ~/ 2 * 2
-            : math.min(s.width, m.width) ~/ 2 * 2;
-        final cellHeight = math.max(
-          2,
-          (cellWidth * m.height / m.width).round() ~/ 2 * 2,
-        );
-        if (cellWidth < 16 ||
-            cellHeight > 4096 ||
-            (cellHeight * s.rows + 120) * s.width > 16000000) {
-          throw Exception('출력 이미지가 너무 큽니다. 너비나 행 수를 줄여 주세요.');
-        }
+        final samples = SamplePlan.create(s, m, kind);
+        final count = samples.count;
+        final clip = samples.clip;
+        final times = samples.times;
+        final layout = SheetLayout.create(s, m, kind, count);
+        final cellWidth = layout.cellWidth, cellHeight = layout.cellHeight;
         for (var i = 0; i < count; i++) {
           checkCancelled();
           progress(
@@ -233,7 +304,7 @@ class MosaicProcessor {
             '-dn',
             if (animated) ...['-t', clip.toStringAsFixed(6)],
             '-vf',
-            '${tone}scale=$cellWidth:$cellHeight,setsar=1${animated ? ',fps=${s.fps},setpts=PTS-STARTPTS' : ''}',
+            '$tone${frameFilter(m, s, cellWidth, cellHeight)}${animated ? ',fps=${s.fps},setpts=PTS-STARTPTS' : ''}',
             if (animated) ...[
               '-c:v',
               'ffv1',
@@ -259,6 +330,7 @@ class MosaicProcessor {
               cellHeight,
               [times[i]],
               single: true,
+              layout: layout,
             );
             final encoded = await _encodeStill(png, dir.path, 'encoded_$i', s);
             final output = await _commit(
@@ -273,7 +345,16 @@ class MosaicProcessor {
           }
         } else if (kind == OutputKind.sheet) {
           final png = p.join(dir.path, 'sheet.png');
-          await _compose(local, png, item, s, cellWidth, cellHeight, times);
+          await _compose(
+            local,
+            png,
+            item,
+            s,
+            cellWidth,
+            cellHeight,
+            times,
+            layout: layout,
+          );
           final output = await _commit(
             await _encodeStill(png, dir.path, 'sheet', s),
             results,
@@ -288,23 +369,19 @@ class MosaicProcessor {
               ? 'webp'
               : s.animationFormat;
           final output = p.join(dir.path, 'animation.$ext');
+          final grid = kind == OutputKind.animatedSheet;
           final args = <String>[];
-          if (kind == OutputKind.reel) {
-            // Generated basenames only: source names never enter concat syntax.
+          if (grid) {
+            final merged = await _mergeGrid(local, dir, layout, clip, s.dark);
+            args.addAll(['-i', merged]);
+          } else {
+            // Only generated basenames enter concat syntax.
             final list = File(p.join(dir.path, 'clips.txt'));
             await list.writeAsString(
-              List.generate(
-                local.length,
-                (i) => "file '${p.basename(local[i])}'",
-              ).join('\n'),
+              local.map((path) => "file '${p.basename(path)}'").join('\n'),
             );
             args.addAll(['-f', 'concat', '-safe', '1', '-i', list.path]);
-          } else {
-            for (final path in local) {
-              args.addAll(['-i', path]);
-            }
           }
-          final grid = kind == OutputKind.animatedSheet;
           final overlay = p.join(dir.path, 'overlay.png');
           await _compose(
             [],
@@ -317,35 +394,12 @@ class MosaicProcessor {
             single: !grid,
             transparent: true,
             labels: grid,
+            layout: layout,
           );
           args.addAll(['-i', overlay]);
-          final header = grid && s.header ? 88 : 0;
-          final bg = s.dark ? '0x111827' : '0xf4f5f7';
-          String graph;
-          if (grid && count > 1) {
-            final cells = List.generate(
-              count,
-              (i) =>
-                  '[$i:v]pad=${cellWidth + s.gap}:${cellHeight + s.gap}:0:0:color=$bg[c$i]',
-            ).join(';');
-            final layout = List.generate(
-              count,
-              (i) =>
-                  '${i % s.columns * (cellWidth + s.gap)}_${i ~/ s.columns * (cellHeight + s.gap)}',
-            ).join('|');
-            graph =
-                '$cells;${List.generate(count, (i) => '[c$i]').join()}xstack=inputs=$count:layout=$layout:fill=$bg, pad=${cellWidth * s.columns + s.gap * (s.columns + 1)}:${cellHeight * s.rows + s.gap * (s.rows + 1) + header}:${s.gap}:${s.gap + header}:color=$bg[base]';
-          } else if (grid) {
-            graph =
-                '[0:v]pad=${cellWidth + s.gap * 2}:${cellHeight + s.gap * 2 + header}:${s.gap}:${s.gap + header}:color=$bg[base]';
-          } else {
-            graph = '[0:v]null[base]';
-          }
-          graph +=
-              ';[base][${grid ? count : 1}:v]overlay=0:0:format=auto,format=yuv420p[out]';
           args.addAll([
             '-filter_complex',
-            graph,
+            '[0:v][1:v]overlay=0:0:format=auto,format=yuv420p[out]',
             '-map',
             '[out]',
             '-an',
@@ -365,7 +419,7 @@ class MosaicProcessor {
               '-c:v',
               'libwebp_anim',
               '-quality',
-              '${s.quality}',
+              '${s.webpQuality}',
               '-loop',
               '0',
             ],
@@ -408,6 +462,98 @@ class MosaicProcessor {
     }
   }
 
+  /// Compose at most ten streams at a time instead of opening every grid cell.
+  Future<String> _mergeGrid(
+    List<String> clips,
+    Directory dir,
+    SheetLayout layout,
+    double clip,
+    bool dark,
+  ) async {
+    final bg = dark ? '0x111827' : '0xf4f5f7';
+    final rows = <String>[];
+    for (var row = 0; row < layout.rows; row++) {
+      checkCancelled();
+      final start = row * layout.columns;
+      final inputs = clips.sublist(
+        start,
+        math.min(start + layout.columns, clips.length),
+      );
+      final args = <String>[];
+      for (final input in inputs) {
+        args.addAll(['-threads', '1', '-i', input]);
+      }
+      final parts = <String>[];
+      for (var i = 0; i < inputs.length; i++) {
+        parts.add(
+          '[$i:v]pad=${layout.cellWidth + (i + 1 < inputs.length ? layout.gap : 0)}:${layout.cellHeight}:0:0:color=$bg[c$i]',
+        );
+      }
+      final labels = List.generate(inputs.length, (i) => '[c$i]').join();
+      final stack = inputs.length > 1
+          ? '${labels}hstack=inputs=${inputs.length}'
+          : '${labels}null';
+      final out = p.join(dir.path, 'row_$row.mkv');
+      parts.add(
+        '$stack,pad=${layout.gridWidth}:${layout.cellHeight}:0:0:color=$bg[out]',
+      );
+      await run([
+        ...args,
+        '-filter_complex',
+        parts.join(';'),
+        '-map',
+        '[out]',
+        '-t',
+        '$clip',
+        '-an',
+        '-c:v',
+        'ffv1',
+        '-threads',
+        '2',
+        '-pix_fmt',
+        'yuv420p',
+        out,
+      ]);
+      rows.add(out);
+    }
+    final args = <String>[];
+    for (final row in rows) {
+      args.addAll(['-threads', '1', '-i', row]);
+    }
+    final parts = <String>[];
+    for (var i = 0; i < rows.length; i++) {
+      parts.add(
+        '[$i:v]pad=${layout.gridWidth}:${layout.cellHeight + (i + 1 < rows.length ? layout.gap : 0)}:0:0:color=$bg[r$i]',
+      );
+    }
+    final labels = List.generate(rows.length, (i) => '[r$i]').join();
+    final stack = rows.length > 1
+        ? '${labels}vstack=inputs=${rows.length}'
+        : '${labels}null';
+    parts.add(
+      '$stack,pad=${layout.width}:${layout.height}:${layout.left}:${layout.top}:color=$bg[out]',
+    );
+    final out = p.join(dir.path, 'grid.mkv');
+    await run([
+      ...args,
+      '-filter_complex',
+      parts.join(';'),
+      '-map',
+      '[out]',
+      '-t',
+      '$clip',
+      '-an',
+      '-c:v',
+      'ffv1',
+      '-threads',
+      '2',
+      '-pix_fmt',
+      'yuv420p',
+      out,
+    ]);
+    return out;
+  }
+
   Future<String> _encodeStill(
     String png,
     String dir,
@@ -422,7 +568,7 @@ class MosaicProcessor {
       '-frames:v',
       '1',
       '-q:v',
-      '${(31 - s.quality * .29).round().clamp(2, 31)}',
+      '${(31 - s.jpegQuality * .29).round().clamp(2, 31)}',
       jpg,
     ]);
     return jpg;
@@ -459,13 +605,12 @@ class MosaicProcessor {
     bool single = false,
     bool transparent = false,
     bool labels = true,
+    required SheetLayout layout,
   }) async {
     checkCancelled();
-    final cols = single ? 1 : s.columns, rows = single ? 1 : s.rows;
-    final gap = single ? 0 : s.gap;
-    final header = !single && s.header ? 88 : 0;
-    final w = cw * cols + gap * (cols + 1),
-        h = ch * rows + gap * (rows + 1) + header;
+    final cols = layout.columns;
+    final gap = layout.gap, header = layout.header;
+    final w = layout.width, h = layout.height;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final fg = s.dark ? Colors.white : const Color(0xff111827);
@@ -515,10 +660,10 @@ class MosaicProcessor {
         w - gap * 2 - 16.0,
       );
     }
-    for (var i = 0; i < cols * rows; i++) {
+    for (var i = 0; i < times.length; i++) {
       checkCancelled();
-      final x = (gap + i % cols * (cw + gap)).toDouble(),
-          y = (header + gap + i ~/ cols * (ch + gap)).toDouble();
+      final x = (layout.left + i % cols * (cw + gap)).toDouble(),
+          y = (layout.top + i ~/ cols * (ch + gap)).toDouble();
       if (i < images.length) {
         final codec = await ui.instantiateImageCodec(
           await File(images[i]).readAsBytes(),

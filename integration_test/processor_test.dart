@@ -37,6 +37,7 @@ void main() {
         expect(meta.height, 180);
         expect(meta.duration, closeTo(3, .1));
         final s = Settings()
+          ..adaptiveCount = false
           ..columns = 2
           ..rows = 1
           ..width = 640

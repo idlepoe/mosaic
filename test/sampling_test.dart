@@ -26,6 +26,6 @@ void main() {
     expect(loaded.outputs, OutputKind.values.toSet());
     expect(loaded.suffix, 'xbad');
     expect(Settings.fromJson({'columns': 0, 'rows': 999}).columns, 1);
-    expect(Settings.fromJson({'columns': 0, 'rows': 999}).rows, 6);
+    expect(Settings.fromJson({'columns': 0, 'rows': 999}).rows, 10);
   });
 }

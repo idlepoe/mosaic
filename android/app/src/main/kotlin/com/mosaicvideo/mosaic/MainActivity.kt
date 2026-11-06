@@ -2,6 +2,7 @@ package com.mosaicvideo.mosaic
 
 import android.app.Activity
 import android.content.Intent
+import android.media.MediaMetadataRetriever
 import android.webkit.MimeTypeMap
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -13,9 +14,27 @@ class MainActivity : FlutterActivity() {
     private var pending: MethodChannel.Result? = null
     private var source: File? = null
     private val executor = Executors.newSingleThreadExecutor()
+    private lateinit var gallery: GalleryBridge
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        gallery = GalleryBridge(this, flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mosaic/media")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "rotation") { result.notImplemented(); return@setMethodCallHandler }
+                val path = call.argument<String>("path")
+                executor.execute {
+                    val retriever = MediaMetadataRetriever()
+                    val rotation = try {
+                        if (path == null) null else {
+                            retriever.setDataSource(path)
+                            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()
+                        }
+                    } catch (_: Exception) { null }
+                    finally { try { retriever.release() } catch (_: Exception) { } }
+                    runOnUiThread { result.success(rotation) }
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mosaic/storage")
             .setMethodCallHandler { call, result ->
                 if (call.method != "export") { result.notImplemented(); return@setMethodCallHandler }
@@ -41,6 +60,7 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Activity result bridge for FlutterActivity")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (::gallery.isInitialized && gallery.onActivityResult(requestCode, resultCode, data)) return
         if (requestCode != 4101) return
         val reply = pending ?: return
         val file = source
@@ -59,5 +79,10 @@ class MainActivity : FlutterActivity() {
                 runOnUiThread { pending = null; source = null; reply.error("EXPORT", e.message, null) }
             }
         }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (::gallery.isInitialized) gallery.onRequestPermissionsResult(requestCode, grantResults)
     }
 }
