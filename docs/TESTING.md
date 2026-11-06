@@ -59,9 +59,7 @@ No Android file-dialog screenshots were retained because those dialogs also disp
 
 The manual scrcpy session did not rerun every automated encoding format. It used JPEG and WebP outputs.
 
-## Not covered by this manual test
-
-### Signed release build validation
+## Signed release build validation
 
 After the manual UI test, version `1.0.0+2` was built using the external release keystore referenced by the local, Git-ignored `android/key.properties`. The signing setup follows the existing `gps_gallery` project. No key file or signing password is committed or attached to GitHub Releases.
 
