@@ -2,6 +2,8 @@
 
 An Android app built with Flutter that creates video contact sheets, screenshots, animated previews, and animated contact sheets directly on your phone. Videos are processed locally with bundled FFmpeg and FFprobe libraries; no server, account, or separate command-line tool installation is required. The current app interface is in Korean.
 
+**[Download the signed ARM64 APK](https://github.com/idlepoe/mosaic/releases/tag/v1.0.0)**
+
 ## Original project
 
 This project is a mobile port based on **[Mosaic by mosaicvideo](https://github.com/mosaicvideo/mosaic)**, an open-source desktop application for Windows, macOS, and Linux.
@@ -109,7 +111,9 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 
 Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (approximately 45.3 MB for the tested build).
 
-The current release configuration uses the development signing key. Configure a production signing key and complete native-library licensing/distribution requirements before publishing.
+Release builds require an untracked `android/key.properties` containing `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. `storeFile` may point to a keystore outside this repository. The build fails if release signing is missing; it never falls back to debug signing. Both signing properties and keystore files are excluded from Git. Never commit signing credentials or attach them to a release.
+
+The release build is version **1.0.0+2** and uses the local release key configured using the same approach as the `gps_gallery` project. The earlier physical-device tests below used build **1.0.0+1** with development signing. Android cannot install the release-signed APK over that development-signed installation; use a fresh installation or a device already using the same release key. Preserve any needed app-private results before removing an older installation.
 
 ## Project structure
 

@@ -28,3 +28,8 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Local Android signing material must never be committed.
+**/key.properties
+**/*.jks
+**/*.keystore

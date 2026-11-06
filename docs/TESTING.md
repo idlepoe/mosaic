@@ -61,6 +61,21 @@ The manual scrcpy session did not rerun every automated encoding format. It used
 
 ## Not covered by this manual test
 
+### Signed release build validation
+
+After the manual UI test, version `1.0.0+2` was built using the external release keystore referenced by the local, Git-ignored `android/key.properties`. The signing setup follows the existing `gps_gallery` project. No key file or signing password is committed or attached to GitHub Releases.
+
+- ARM64 release APK build: passed
+- `apksigner verify`: passed, APK Signature Scheme v2
+- APK certificate fingerprint compared against Gradle's release signing report: matched
+- Package: `com.mosaicvideo.mosaic`, version name `1.0.0`
+- ARM64 split APK version code: `2002` (ABI offset plus Flutter build number 2)
+- Signer certificate SHA-256: `FFE4A47D5541C2705AEE3EBD333EE9A605B4581B39C05631EBA5790419415B41`
+
+The release-signed APK was not installed over the earlier development-signed app because the signing identities differ. No app data was removed. The UI and native pipeline code are unchanged from the physically tested build.
+
+## Manual checks not performed
+
 - Sending a file to an external share recipient; no content was sent
 - Deleting results through the UI
 - Long videos, very large source files, or a multi-video batch
