@@ -216,7 +216,7 @@ class StudioNavigation extends StatelessWidget {
                     child: Semantics(
                       selected: index == i,
                       child: ShadButton.ghost(
-                        height: 60,
+                        height: 0,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 4,
                           vertical: 6,
@@ -226,26 +226,29 @@ class StudioNavigation extends StatelessWidget {
                             ? c.primary
                             : c.mutedForeground,
                         onPressed: () => onChanged(i),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              [
-                                LucideIcons.film,
-                                LucideIcons.slidersHorizontal,
-                                LucideIcons.images,
-                              ][i],
-                              size: 20,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              labels[i],
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                        child: Flexible(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                [
+                                  LucideIcons.film,
+                                  LucideIcons.slidersHorizontal,
+                                  LucideIcons.images,
+                                ][i],
+                                size: 20,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                labels[i],
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

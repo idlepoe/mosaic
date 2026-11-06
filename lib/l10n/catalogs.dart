@@ -218,6 +218,9 @@ const translations = {
         "Could not select a video. Try another gallery app or select a file.",
     "nativeUnknown":
         "Could not complete the device operation. Please try again.",
+    "mascotCompleted": "Created {0} result(s). View them in Results.",
+    "mascotPartial":
+        "Created {0} result(s); {1} video(s) failed. Check each file’s status.",
   },
   "ko": {
     "preview": "미리보기 · {0}",
@@ -401,6 +404,8 @@ const translations = {
     "nativeSave": "파일을 저장하지 못했습니다. 저장 공간과 접근 권한을 확인하세요.",
     "nativePick": "동영상을 선택하지 못했습니다. 다른 갤러리 앱이나 파일 선택을 사용하세요.",
     "nativeUnknown": "기기 작업을 완료하지 못했습니다. 다시 시도하세요.",
+    "mascotCompleted": "결과 {0}개를 만들었어요. 결과 화면에서 확인하세요.",
+    "mascotPartial": "결과 {0}개 생성 · 영상 {1}개 처리 실패. 파일별 상태를 확인하세요.",
   },
   "ja": {
     "preview": "プレビュー · {0}",
@@ -576,5 +581,7 @@ const translations = {
     "nativeSave": "保存できませんでした。空き容量とアクセス権限を確認してください。",
     "nativePick": "動画を選択できませんでした。別のギャラリーアプリかファイル選択をお試しください。",
     "nativeUnknown": "端末での操作を完了できませんでした。再試行してください。",
+    "mascotCompleted": "{0}件の結果を生成しました。結果画面で確認できます。",
+    "mascotPartial": "{0}件を生成、{1}本の動画で失敗しました。各ファイルの状態を確認してください。",
   },
 };

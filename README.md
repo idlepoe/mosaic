@@ -2,7 +2,24 @@
 
 An Android app built with Flutter that creates video contact sheets, screenshots, animated previews, and animated contact sheets directly on your phone. Videos are processed locally with bundled FFmpeg and FFprobe libraries; no server, account, or separate command-line tool installation is required. The current app interface is in Korean.
 
-**[Published releases](https://github.com/idlepoe/mosaic/releases)** · Current version: **1.3.1+8**
+**[Published releases](https://github.com/idlepoe/mosaic/releases)** · Current version: **1.4.0+9**
+
+## Version 1.4 mascot screens and motion
+
+The six-pose rough cartoon octopus now appears in native/initial-loading splash,
+empty video and results states, the settings header, generation progress, and
+completion/error feedback. A separate tile moves into the loading mascot's empty
+mosaic slot on a 2.4-second loop. The real progress bar and cancellation stay
+independent of the decoration. Reduced motion uses a still frame, and hidden or
+inactive loaders stop their animation.
+
+Artwork is bundled locally with no text baked into the images. Feedback remains
+localized in Korean, English, and Japanese. See [mascot implementation and
+validation](docs/MASCOT_IMPLEMENTATION.md).
+
+| Video selection | Settings | Empty results |
+|---|---|---|
+| <img src="docs/screenshots/v1.4/01-videos.jpg" width="220" alt="Octopus on the video selection screen"> | <img src="docs/screenshots/v1.4/02-settings.jpg" width="220" alt="Compact settings mascot"> | <img src="docs/screenshots/v1.4/03-empty-results.jpg" width="220" alt="Inviting empty-results mascot"> |
 
 ## Version 1.3 design refresh
 
@@ -92,7 +109,7 @@ Additional features include multiple-file selection, a sequential processing que
 
 ## Screenshots
 
-The current **1.3.1+8** settings separate conflicting modes and disable inapplicable controls:
+The current **1.4.0+9** settings separate conflicting modes and disable inapplicable controls:
 
 | Grouped settings | Automatic / manual modes | Output-specific controls |
 |:---:|:---:|:---:|
@@ -184,11 +201,11 @@ Build an ARM64 release-mode APK:
 flutter build apk --release --target-platform android-arm64 --split-per-abi
 ```
 
-Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (approximately 47.9 MB for the tested build).
+Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (approximately 61.2 MB for the tested build).
 
 Release builds require an untracked `android/key.properties` containing `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. `storeFile` may point to a keystore outside this repository. The build fails if release signing is missing; it never falls back to debug signing. Both signing properties and keystore files are excluded from Git. Never commit signing credentials or attach them to a release.
 
-The current build is version **1.3.1+8** and uses the local release key configured using the same approach as the `gps_gallery` project. The earlier physical-device tests below used build **1.0.0+1** with development signing. Android cannot install the release-signed APK over that development-signed installation; use a fresh installation or a device already using the same release key. Preserve any needed app-private results before removing an older installation. Debug builds use a separate `.dev` application ID.
+The current build is version **1.4.0+9** and uses the local release key configured using the same approach as the `gps_gallery` project. The earlier physical-device tests below used build **1.0.0+1** with development signing. Android cannot install the release-signed APK over that development-signed installation; use a fresh installation or a device already using the same release key. Preserve any needed app-private results before removing an older installation. Debug builds use a separate `.dev` application ID.
 
 ## Project structure
 

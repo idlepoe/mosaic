@@ -54,3 +54,10 @@ must not obscure video previews, settings controls, progress or cancel/retry act
 
 This stage defines the artwork baseline. App screen integration and animation are
 separate implementation stages; the launcher icon is already established.
+
+
+## Implementation status
+
+Stages 3–5 are implemented in version 1.4.0. Individual artwork is in
+`assets/mascot/`; screen integration, animation behavior, splash generation and
+verification are described in [MASCOT_IMPLEMENTATION.md](MASCOT_IMPLEMENTATION.md).

@@ -163,5 +163,7 @@
   "nativePermission": "Storage permission is required to save to the gallery.",
   "nativeSave": "Could not save the file. Check storage space and access permissions.",
   "nativePick": "Could not select a video. Try another gallery app or select a file.",
-  "nativeUnknown": "Could not complete the device operation. Please try again."
+  "nativeUnknown": "Could not complete the device operation. Please try again.",
+  "mascotCompleted": "Created {0} result(s). View them in Results.",
+  "mascotPartial": "Created {0} result(s); {1} video(s) failed. Check each file’s status."
 }

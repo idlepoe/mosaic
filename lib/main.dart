@@ -1,3 +1,4 @@
+import 'ui/mascot.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'ui/studio_theme.dart';
 import 'ui/studio_components.dart';
@@ -89,6 +90,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool saving = false;
   double progress = 0;
   String step = '';
+  MascotPose? runPose;
+  String Function()? runNotice;
   int page = 0;
   @override
   void initState() {
@@ -109,9 +112,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (busy && state == AppLifecycleState.paused) processor.cancel();
   }
 
-  void message(String text) {
+  void message(String text, {MascotPose? pose}) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              if (pose != null) ...[
+                MascotArt(pose, size: 44),
+                const SizedBox(width: 10),
+              ],
+              Expanded(child: Text(text)),
+            ],
+          ),
+        ),
+      );
     }
   }
 
@@ -137,7 +152,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       }
     } catch (_) {
-      message(tr('couldNotLoadSettingsUsingDefaults'));
+      message(tr('couldNotLoadSettingsUsingDefaults'), pose: MascotPose.error);
     }
     if (mounted) setState(() => ready = true);
   }
@@ -215,7 +230,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       }
     } catch (e) {
-      message(tr('couldNotSelectFiles', [errorText(e)]));
+      message(
+        tr('couldNotSelectFiles', [errorText(e)]),
+        pose: MascotPose.error,
+      );
     } finally {
       if (mounted) setState(() => picking = false);
     }
@@ -225,7 +243,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (settings.outputs.isEmpty || queue.isEmpty) return;
     final snapshot = Settings.fromJson(settings.toJson());
     processor.begin();
+    var generatedCount = 0;
+    var failedVideos = 0;
     setState(() {
+      runPose = null;
+      runNotice = null;
       busy = true;
       progress = 0;
       step = tr('readingVideoInformation');
@@ -250,6 +272,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               }
             },
             (file) {
+              generatedCount++;
               if (mounted) setState(() => results.insert(0, file));
             },
           );
@@ -258,6 +281,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           item.setStatus('canceled');
           rethrow;
         } catch (e) {
+          failedVideos++;
           if (mounted) setState(() => item.setStatus('failed', e));
         }
       }
@@ -265,12 +289,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         setState(() {
           progress = 1;
           step = tr('processingFinishedCheckTheStatusOf');
+          runPose = failedVideos == 0 ? MascotPose.complete : MascotPose.error;
+          runNotice = failedVideos == 0
+              ? () => tr('mascotCompleted', [generatedCount])
+              : () => tr('mascotPartial', [generatedCount, failedVideos]);
         });
       }
     } on JobCancelled {
+      if (mounted) {
+        setState(() {
+          runPose = MascotPose.settings;
+          runNotice = () => tr('processingCanceledCompletedResultsAreRetained');
+        });
+      }
       message(tr('processingCanceledCompletedResultsAreRetained'));
     } catch (e) {
-      message(tr('processingFailed', [errorText(e)]));
+      if (mounted) {
+        setState(() {
+          runPose = MascotPose.error;
+          runNotice = () => tr('processingFailed', [errorText(e)]);
+        });
+      }
+      message(tr('processingFailed', [errorText(e)]), pose: MascotPose.error);
     } finally {
       await WakelockPlus.disable();
       if (mounted) setState(() => busy = false);
@@ -301,7 +341,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       );
     } catch (e) {
-      message(errorText(e));
+      message(errorText(e), pose: MascotPose.error);
     } finally {
       if (mounted) setState(() => picking = false);
     }
@@ -314,9 +354,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await MethodChannel(
         'mosaic/gallery',
       ).invokeMapMethod<String, dynamic>('save', {'path': file.path});
-      message(tr('savedToTheMosaicAlbumIn'));
+      message(tr('savedToTheMosaicAlbumIn'), pose: MascotPose.complete);
     } catch (e) {
-      message(tr('couldNotSaveToGallery', [errorText(e)]));
+      message(
+        tr('couldNotSaveToGallery', [errorText(e)]),
+        pose: MascotPose.error,
+      );
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -347,7 +390,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       );
       if (saved == true) message(tr('savedToTheSelectedLocation'));
     } catch (e) {
-      message(tr('couldNotSave', [errorText(e)]));
+      message(tr('couldNotSave', [errorText(e)]), pose: MascotPose.error);
     }
   }
 
@@ -368,7 +411,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               size: 23,
             ),
             const SizedBox(width: 10),
-            const Text('Mosaic'),
+            const Flexible(
+              child: Text(
+                'Mosaic',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -383,14 +432,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onPressed: () => showAboutDialog(
               context: context,
               applicationName: 'Mosaic Android',
-              applicationVersion: '1.3.1',
+              applicationVersion: '1.4.0',
               children: [Text(tr('aFlutterPortInspiredByMosaic'))],
             ),
           ),
         ],
       ),
       body: !ready
-          ? Center(child: CircularProgressIndicator())
+          ? const MascotStartup()
           : SafeArea(
               child: IndexedStack(
                 index: page,
@@ -442,7 +491,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           choice == 'system' ? null : Locale(choice),
         );
       } catch (e) {
-        message(tr('couldNotSave', [errorText(e)]));
+        message(tr('couldNotSave', [errorText(e)]), pose: MascotPose.error);
       }
     }
   }
@@ -498,17 +547,38 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ),
                   ),
                   SizedBox(height: 12),
-                  Text(
-                    tr('preserveSourceProportionsAdaptToShort'),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      height: 1.6,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tr('preserveSourceProportionsAdaptToShort'),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                      if (queue.isEmpty) ...[
+                        const SizedBox(width: 10),
+                        const MascotArt(MascotPose.select, size: 86),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
             SizedBox(height: 18),
+            if (picking)
+              Row(
+                children: [
+                  LoadingMascot(size: 54, active: page == 0),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(tr('analyzingVideos'))),
+                ],
+              ),
             StudioButton(
               onPressed: busy || picking ? null : _pick,
               icon: Icon(Icons.add_rounded),
@@ -615,7 +685,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (step.isNotEmpty) ...[
-              Text(step, maxLines: 2, overflow: TextOverflow.ellipsis),
+              Row(
+                children: [
+                  if (busy)
+                    LoadingMascot(size: 76, active: page == 0)
+                  else if (runPose != null)
+                    MascotArt(runPose!, size: 60),
+                  if (busy || runPose != null) const SizedBox(width: 12),
+                  Expanded(
+                    child: Semantics(
+                      liveRegion: !busy,
+                      child: Text(
+                        runNotice?.call() ?? step,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
@@ -769,11 +857,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     child: ListView(
       padding: EdgeInsets.all(20),
       children: [
-        Text(
-          tr('outputSettings'),
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                tr('outputSettings'),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const MascotArt(MascotPose.settings, size: 60),
+          ],
         ),
         SizedBox(height: 8),
         StudioPanel(
@@ -1102,30 +1198,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   );
   Widget _resultsPage() => results.isEmpty
       ? Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
-                    borderRadius: BorderRadius.circular(16),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const MascotArt(MascotPose.select, size: 168),
+                  const SizedBox(height: 20),
+                  Text(
+                    tr('completedResultsWillAppearHere'),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  child: Icon(
-                    LucideIcons.images,
-                    size: 32,
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  tr('completedResultsWillAppearHere'),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         )
