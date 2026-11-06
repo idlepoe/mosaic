@@ -24,3 +24,15 @@ the included components' licenses. Flutter's in-app license page lists registere
 Dart package notices; it is not a substitute for native distribution materials.
 
 Other dependencies and their pinned resolved versions are in pubspec.lock.
+
+
+## Flutter ShadcnUI
+
+UI components: https://pub.dev/packages/shadcn_ui
+Source: https://github.com/nank1ro/flutter-shadcn-ui
+
+The app uses the community Flutter implementation `shadcn_ui` 0.57.4 (MIT)
+with project-specific color tokens and responsive layout wrappers. The original
+web shadcn/ui JavaScript components are not executed inside this Flutter app.
+Resolved transitive dependencies and their versions are recorded in pubspec.lock;
+registered package license notices are available from the app's license page.

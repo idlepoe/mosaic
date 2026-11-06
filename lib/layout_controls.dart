@@ -1,3 +1,5 @@
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'ui/studio_components.dart';
 import 'l10n/app_language.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -37,9 +39,8 @@ class LayoutControls extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Card(
+        StudioPanel(
           color: colors.primaryContainer,
-          elevation: 0,
           child: Padding(
             padding: EdgeInsets.all(20),
             child: Column(
@@ -105,7 +106,10 @@ class LayoutControls extends StatelessWidget {
                 if (layout != null && layout.width < settings.width - 20)
                   Text(
                     tr('outputResolutionWasReducedToFit'),
-                    style: TextStyle(fontSize: 12),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: ShadTheme.of(context).colorScheme.mutedForeground,
+                    ),
                   ),
               ],
             ),
@@ -124,23 +128,25 @@ class LayoutControls extends StatelessWidget {
               (v) => change(() => settings.thumbnailAspect = v),
             ),
             SizedBox(height: 12),
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                  value: false,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                StudioChoice(
                   label: Text(tr('fitEntireFrame')),
-                  icon: Icon(Icons.fit_screen),
+                  selected: !settings.crop,
+                  onSelected: settings.thumbnailAspect == 'source'
+                      ? null
+                      : (_) => change(() => settings.crop = false),
                 ),
-                ButtonSegment(
-                  value: true,
+                StudioChoice(
                   label: Text(tr('cropToFill')),
-                  icon: Icon(Icons.crop),
+                  selected: settings.crop,
+                  onSelected: settings.thumbnailAspect == 'source'
+                      ? null
+                      : (_) => change(() => settings.crop = true),
                 ),
               ],
-              selected: {settings.crop},
-              onSelectionChanged: settings.thumbnailAspect == 'source'
-                  ? null
-                  : (v) => change(() => settings.crop = v.single),
             ),
             SizedBox(height: 8),
             Text(
@@ -149,7 +155,10 @@ class LayoutControls extends StatelessWidget {
                   : settings.effectiveCrop
                   ? tr('cropsTheEdgesToFillThe')
                   : tr('addsPaddingAsNeededToShow'),
-              style: TextStyle(fontSize: 12),
+              style: TextStyle(
+                fontSize: 12,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
             ),
           ],
         ),
@@ -159,22 +168,23 @@ class LayoutControls extends StatelessWidget {
           enabled: settings.gridEnabled,
           disabledReason: tr('availableWhenASheetOutputIs'),
           children: [
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                  value: true,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                StudioChoice(
                   label: Text(tr('fitToContent')),
-                  icon: Icon(Icons.width_normal),
+                  selected: settings.fitSheetWidth,
+                  onSelected: (_) =>
+                      change(() => settings.fitSheetWidth = true),
                 ),
-                ButtonSegment(
-                  value: false,
+                StudioChoice(
                   label: Text(tr('fixedAspectRatio')),
-                  icon: Icon(Icons.aspect_ratio),
+                  selected: !settings.fitSheetWidth,
+                  onSelected: (_) =>
+                      change(() => settings.fitSheetWidth = false),
                 ),
               ],
-              selected: {settings.fitSheetWidth},
-              onSelectionChanged: (v) =>
-                  change(() => settings.fitSheetWidth = v.single),
             ),
             SizedBox(height: 12),
             _aspects(
@@ -188,7 +198,10 @@ class LayoutControls extends StatelessWidget {
               settings.fitSheetWidth
                   ? tr('fitToContentFillsTheWidth')
                   : tr('fixedRatioPreservesTheOverallImage'),
-              style: TextStyle(fontSize: 12),
+              style: TextStyle(
+                fontSize: 12,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
             ),
           ],
         ),
@@ -198,8 +211,7 @@ class LayoutControls extends StatelessWidget {
           enabled: settings.gridEnabled,
           disabledReason: tr('availableWhenASheetOutputIs'),
           children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            StudioToggle(
               title: Text(tr('automaticArrangement')),
               subtitle: Text(tr('whenEnabledArrangesByMaximumCount')),
               value: settings.autoArrange,
@@ -210,7 +222,7 @@ class LayoutControls extends StatelessWidget {
               runSpacing: 4,
               children: [
                 for (final n in [4, 9, 12, 16, 20, 24, 36, 48, 64, 100])
-                  ChoiceChip(
+                  StudioChoice(
                     label: Text(tr('frames', [n])),
                     selected: settings.gridCount == n,
                     onSelected: settings.autoArrange
@@ -226,7 +238,10 @@ class LayoutControls extends StatelessWidget {
                   : tr('upToFramesAutomaticCountPresets', [
                       settings.columns * settings.rows,
                     ]),
-              style: TextStyle(fontSize: 12),
+              style: TextStyle(
+                fontSize: 12,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
             ),
             SizedBox(height: 8),
             Row(
@@ -275,7 +290,7 @@ class LayoutControls extends StatelessWidget {
         '3:4',
         '1:1',
       ])
-        ChoiceChip(
+        StudioChoice(
           label: Text(
             ratio == 'source'
                 ? tr('sourceLabel')
@@ -297,7 +312,7 @@ class LayoutControls extends StatelessWidget {
   }) => Container(
     decoration: BoxDecoration(
       border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Column(
       children: [

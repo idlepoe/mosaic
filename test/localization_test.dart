@@ -1,3 +1,4 @@
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -11,6 +12,12 @@ import 'package:mosaic/l10n/catalogs.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // Resolve deferred shadcn translations outside widget tests' fake async zones.
+  setUpAll(() async {
+    for (final code in ['ko', 'ja']) {
+      await GlobalShadLocalizations.delegate.load(Locale(code));
+    }
+  });
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     AppLanguage.instance.value = null;
@@ -106,9 +113,12 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       AppLanguage.instance.value = Locale(code);
       await tester.pumpWidget(const MosaicApp());
-      await tester.runAsync(
-        () async => Future<void>.delayed(const Duration(milliseconds: 100)),
-      );
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.runAsync(
+          () async => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+      }
       await tester.pumpAndSettle();
       expect(find.text(tr('videos')), findsOneWidget);
       await tester.tap(find.text(tr('settings')));
@@ -119,6 +129,10 @@ void main() {
       await tester.tap(find.byIcon(Icons.language));
       await tester.pumpAndSettle();
       await tester.tap(find.text(code == 'en' ? '日本語' : 'English'));
+      await tester.pump();
+      await tester.runAsync(
+        () async => Future<void>.delayed(const Duration(milliseconds: 150)),
+      );
       await tester.pumpAndSettle();
       expect(find.text(code == 'en' ? '設定' : 'Settings'), findsOneWidget);
       expect(tester.takeException(), isNull);

@@ -1,3 +1,6 @@
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'ui/studio_theme.dart';
+import 'ui/studio_components.dart';
 import 'l10n/app_language.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -48,26 +51,25 @@ class _MosaicAppState extends State<MosaicApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: AppLanguage.instance,
-    builder: (context, _) => MaterialApp(
-      locale: AppLanguage.instance.value,
-      supportedLocales: AppLanguage.supported,
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      localeListResolutionCallback: (locales, supported) =>
-          AppLanguage.resolve(AppLanguage.instance.value, locales ?? []),
-      title: 'Mosaic',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xff008768)),
-        useMaterial3: true,
+    builder: (context, _) => ShadApp.custom(
+      theme: StudioTheme.shad(Brightness.light),
+      darkTheme: StudioTheme.shad(Brightness.dark),
+      appBuilder: (context) => MaterialApp(
+        locale: AppLanguage.instance.value,
+        supportedLocales: AppLanguage.supported,
+        localizationsDelegates: const [
+          GlobalShadLocalizations.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
+        localeListResolutionCallback: (locales, supported) =>
+            AppLanguage.resolve(AppLanguage.instance.value, locales ?? []),
+        title: 'Mosaic',
+        debugShowCheckedModeBanner: false,
+        theme: StudioTheme.material(Brightness.light),
+        darkTheme: StudioTheme.material(Brightness.dark),
+        builder: (context, child) => ShadAppBuilder(child: child!),
+        home: HomePage(),
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Color(0xff61d9b1),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      home: HomePage(),
     ),
   );
 }
@@ -283,18 +285,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (!mounted) return;
       await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => ShadDialog(
           title: Text(item.name),
-          content: SizedBox(
-            width: 600,
-            child: SingleChildScrollView(child: SelectableText(m.raw)),
-          ),
           actions: [
-            TextButton(
+            StudioButton(
+              ghost: true,
               onPressed: () => Navigator.pop(context),
               child: Text(tr('close')),
             ),
           ],
+          child: SizedBox(
+            width: 600,
+            child: SingleChildScrollView(child: SelectableText(m.raw)),
+          ),
         ),
       );
     } catch (e) {
@@ -356,7 +359,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     },
     child: Scaffold(
       appBar: AppBar(
-        title: Text('Mosaic'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.grid2x2,
+              color: Theme.of(context).colorScheme.primary,
+              size: 23,
+            ),
+            const SizedBox(width: 10),
+            const Text('Mosaic'),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: tr('language'),
@@ -369,7 +383,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onPressed: () => showAboutDialog(
               context: context,
               applicationName: 'Mosaic Android',
-              applicationVersion: '1.2.1',
+              applicationVersion: '1.3.0',
               children: [Text(tr('aFlutterPortInspiredByMosaic'))],
             ),
           ),
@@ -383,55 +397,43 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 children: [_queuePage(), _settingsPage(), _resultsPage()],
               ),
             ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: page,
-        onDestinationSelected: (i) => setState(() => page = i),
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.video_library_outlined),
-            label: tr('videos'),
-          ),
-          NavigationDestination(icon: Icon(Icons.tune), label: tr('settings')),
-          NavigationDestination(
-            icon: Icon(Icons.collections_outlined),
-            label: tr('results'),
-          ),
-        ],
+      bottomNavigationBar: StudioNavigation(
+        index: page,
+        onChanged: (i) => setState(() => page = i),
+        labels: [tr('videos'), tr('settings'), tr('results')],
       ),
     ),
   );
   Future<void> _chooseLanguage() async {
     final choice = await showDialog<String>(
       context: context,
-      builder: (context) => SimpleDialog(
+      builder: (context) => ShadDialog(
         title: Text(tr('language')),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Text(tr('languageHint')),
-          ),
-          for (final entry in {
-            'system': tr('system'),
-            'ko': '한국어',
-            'en': 'English',
-            'ja': '日本語',
-          }.entries)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, entry.key),
-              child: Row(
-                children: [
-                  Icon(
-                    (AppLanguage.instance.value?.languageCode ?? 'system') ==
-                            entry.key
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(entry.value)),
-                ],
+        description: Text(tr('languageHint')),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final entry in {
+              'system': tr('system'),
+              'ko': '한국어',
+              'en': 'English',
+              'ja': '日本語',
+            }.entries)
+              StudioButton(
+                ghost: true,
+                onPressed: () => Navigator.pop(context, entry.key),
+                icon: Icon(
+                  (AppLanguage.instance.value?.languageCode ?? 'system') ==
+                          entry.key
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  size: 18,
+                ),
+                child: Text(entry.value),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
     if (choice != null) {
@@ -457,12 +459,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             Container(
               padding: EdgeInsets.all(22),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xff064e3b), Color(0xff0f766e)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                color: Theme.of(context).colorScheme.primaryContainer,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,15 +472,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     children: [
                       Icon(
                         Icons.auto_awesome_mosaic_rounded,
-                        color: Color(0xff99f6e4),
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       SizedBox(width: 8),
-                      Text(
-                        'MOSAIC STUDIO',
-                        style: TextStyle(
-                          color: Color(0xff99f6e4),
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2,
+                      Expanded(
+                        child: Text(
+                          'MOSAIC STUDIO',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                          ),
                         ),
                       ),
                     ],
@@ -488,7 +491,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   Text(
                     tr('yourVideoMomentsInTheRight'),
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       height: 1.25,
@@ -497,16 +500,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   SizedBox(height: 12),
                   Text(
                     tr('preserveSourceProportionsAdaptToShort'),
-                    style: TextStyle(color: Color(0xffccfbf1), height: 1.6),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      height: 1.6,
+                    ),
                   ),
                 ],
               ),
             ),
             SizedBox(height: 18),
-            FilledButton.icon(
+            StudioButton(
               onPressed: busy || picking ? null : _pick,
               icon: Icon(Icons.add_rounded),
-              label: Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 13),
                 child: Text(
                   picking
@@ -517,16 +523,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
+              child: StudioButton(
+                ghost: true,
                 onPressed: busy || picking ? null : () => _pick(files: true),
                 icon: Icon(Icons.folder_open, size: 16),
-                label: Text(tr('selectFiles')),
+                child: Text(tr('selectFiles')),
               ),
             ),
             SizedBox(height: 14),
             for (final item in queue)
-              Card(
-                elevation: 0,
+              StudioPanel(
                 child: ListTile(
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 16,
@@ -554,7 +560,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             if (queue.isNotEmpty)
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(
+                child: StudioButton(
+                  ghost: true,
                   onPressed: busy || picking ? null : _clearQueue,
                   child: Text(tr('clearList')),
                 ),
@@ -617,11 +624,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(value: progress, minHeight: 5),
+                child: ShadProgress(
+                  value: progress,
+                  minHeight: 6,
+                  semanticsLabel: step,
+                ),
               ),
               SizedBox(height: 12),
             ],
-            FilledButton.icon(
+            StudioButton(
               onPressed: busy
                   ? () async {
                       await processor.cancel();
@@ -630,7 +641,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ? null
                   : _start,
               icon: Icon(busy ? Icons.stop_rounded : Icons.auto_awesome),
-              label: Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 13),
                 child: Text(
                   busy
@@ -662,47 +673,51 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       tr('playShortClipsInSequence'),
       tr('animateMultipleScenesTogether'),
     ];
-    return Material(
-      color: selected ? colors.secondaryContainer : colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(
-          color: selected ? colors.primary : colors.outlineVariant,
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? colors.primaryContainer : colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+          ),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: busy
-            ? null
-            : () => _change(() {
-                selected
-                    ? settings.outputs.remove(kind)
-                    : settings.outputs.add(kind);
-              }),
-        child: Padding(
-          padding: EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(icons[kind.index], color: colors.primary),
-                  Icon(
-                    selected ? Icons.check_circle : Icons.circle_outlined,
-                    color: selected ? colors.primary : colors.outline,
-                    size: 20,
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Text(kind.label, style: TextStyle(fontWeight: FontWeight.w700)),
-              SizedBox(height: 6),
-              Text(
-                captions[kind.index],
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: busy
+              ? null
+              : () => _change(() {
+                  selected
+                      ? settings.outputs.remove(kind)
+                      : settings.outputs.add(kind);
+                }),
+          child: Padding(
+            padding: EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Icon(icons[kind.index], color: colors.primary),
+                    Icon(
+                      selected ? Icons.check_circle : Icons.circle_outlined,
+                      color: selected ? colors.primary : colors.outline,
+                      size: 20,
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Text(kind.label, style: TextStyle(fontWeight: FontWeight.w700)),
+                SizedBox(height: 6),
+                Text(
+                  captions[kind.index],
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -741,9 +756,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         details = e.message;
       }
     }
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+    return StudioPanel(
+      color: Theme.of(context).colorScheme.secondaryContainer,
       child: ListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Icon(Icons.dashboard_customize_outlined),
@@ -770,8 +784,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         SizedBox(height: 8),
-        Card(
-          elevation: 0,
+        StudioPanel(
           child: ListTile(
             title: Text(tr('selectedOutputs')),
             subtitle: Text(
@@ -810,8 +823,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               10,
               (v) => settings.width = v.round() ~/ 2 * 2,
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            StudioToggle(
               title: Text(tr('reduceCountForShorterVideos')),
               subtitle: Text(tr('reducesTheActualSampleCountWithout')),
               value: settings.adaptiveCount,
@@ -824,7 +836,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 spacing: 8,
                 children: [
                   for (final n in [1.0, 2.0, 5.0, 10.0])
-                    ChoiceChip(
+                    StudioChoice(
                       label: Text(tr('framePerSeconds', [n.round()])),
                       selected: settings.sampleInterval == n,
                       onSelected: (_) =>
@@ -949,8 +961,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 (v) => settings.gap = v.round() ~/ 2 * 2,
               ),
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            StudioToggle(
               title: Text(tr('timestamps')),
               subtitle: Text(tr('clipStartTimesOnStillImages')),
               value: settings.timestamps,
@@ -958,8 +969,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ? (v) => _change(() => settings.timestamps = v)
                   : null,
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            StudioToggle(
               title: Text(tr('fileInformationHeader')),
               subtitle: Text(tr('sheetOutputsOnly')),
               value: settings.header,
@@ -967,8 +977,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ? (v) => _change(() => settings.header = v)
                   : null,
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            StudioToggle(
               title: Text(tr('darkOutputBackground')),
               subtitle: Text(tr('appliesToSheetBackgroundsAndAspect')),
               value: settings.dark,
@@ -985,12 +994,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           title: tr('fileNames'),
           description: tr('appliesToTheNamesOfAll'),
           children: [
-            TextFormField(
+            Text(
+              tr('fileNameSuffix'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            ShadInput(
               initialValue: settings.suffix,
-              decoration: InputDecoration(
-                labelText: tr('fileNameSuffix'),
-                helperText: tr('leaveEmptyForDefaultNamesExisting'),
-              ),
+              placeholder: Text(tr('fileNameSuffix')),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9_-]')),
                 LengthLimitingTextInputFormatter(32),
@@ -999,6 +1010,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 settings.suffix = v;
                 _persist();
               },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              tr('leaveEmptyForDefaultNamesExisting'),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             SizedBox(height: 12),
             Text(
@@ -1050,12 +1066,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       Text(
         '$title: ${value == value.roundToDouble() ? value.round() : value.toStringAsFixed(1)}',
       ),
-      Slider(
-        value: value,
-        min: min,
-        max: max,
-        divisions: divisions,
-        onChanged: (v) => _change(() => change(v)),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: ShadSlider(
+          initialValue: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          onChanged: (v) => _change(() => change(v)),
+        ),
       ),
     ],
   );
@@ -1064,25 +1083,66 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     String value,
     List<String> values,
     ValueChanged<String> change,
-  ) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    title: Text(title),
-    trailing: DropdownButton<String>(
-      value: value,
-      items: values
-          .map((v) => DropdownMenuItem(value: v, child: Text(v.toUpperCase())))
-          .toList(),
-      onChanged: (v) => _change(() => change(v!)),
+  ) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ShadSelect<String>(
+          initialValue: value,
+          minWidth: 100,
+          options: values.map(
+            (v) => ShadOption(value: v, child: Text(v.toUpperCase())),
+          ),
+          selectedOptionBuilder: (_, v) => Text(v.toUpperCase()),
+          onChanged: (v) {
+            if (v != null) _change(() => change(v));
+          },
+        ),
+      ],
     ),
   );
   Widget _resultsPage() => results.isEmpty
-      ? Center(child: Text(tr('completedResultsWillAppearHere')))
+      ? Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    LucideIcons.images,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  tr('completedResultsWillAppearHere'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          ),
+        )
       : ListView.builder(
           padding: EdgeInsets.all(16),
           itemCount: results.length,
           itemBuilder: (context, i) {
             final file = results[i];
-            return Card(
+            return StudioPanel(
               child: Padding(
                 padding: EdgeInsets.all(12),
                 child: Column(
@@ -1107,7 +1167,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ),
                       )
                     else
-                      OutlinedButton.icon(
+                      StudioButton(
+                        outline: true,
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute<void>(
@@ -1115,7 +1176,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ),
                         ),
                         icon: Icon(Icons.play_arrow),
-                        label: Text(tr('playPreview')),
+                        child: Text(tr('playPreview')),
                       ),
                     SizedBox(height: 8),
                     Text(
@@ -1126,14 +1187,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     Wrap(
                       alignment: WrapAlignment.end,
                       children: [
-                        TextButton.icon(
+                        StudioButton(
+                          color: Theme.of(context).colorScheme.secondary,
                           onPressed: busy || saving ? null : () => _save(file),
                           icon: Icon(Icons.save_alt),
-                          label: Text(
+                          child: Text(
                             saving ? tr('saving') : tr('saveToGallery'),
                           ),
                         ),
-                        TextButton.icon(
+                        StudioButton(
+                          ghost: true,
                           onPressed: busy
                               ? null
                               : () async {
@@ -1148,7 +1211,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   }
                                 },
                           icon: Icon(Icons.share_outlined),
-                          label: Text(tr('share')),
+                          child: Text(tr('share')),
                         ),
                         IconButton(
                           tooltip: tr('saveFileToAnotherLocation'),
@@ -1164,21 +1227,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               : () async {
                                   final yes = await showDialog<bool>(
                                     context: context,
-                                    builder: (context) => AlertDialog(
+                                    builder: (context) => ShadDialog(
                                       title: Text(tr('deleteThisResult')),
-                                      content: Text(p.basename(file.path)),
                                       actions: [
-                                        TextButton(
+                                        StudioButton(
+                                          ghost: true,
                                           onPressed: () =>
                                               Navigator.pop(context, false),
                                           child: Text(tr('cancel2')),
                                         ),
-                                        TextButton(
+                                        StudioButton(
+                                          ghost: true,
                                           onPressed: () =>
                                               Navigator.pop(context, true),
                                           child: Text(tr('delete')),
                                         ),
                                       ],
+                                      child: Text(p.basename(file.path)),
                                     ),
                                   );
                                   if (yes == true) {

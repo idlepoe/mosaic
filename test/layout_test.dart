@@ -1,3 +1,5 @@
+import 'support/studio_test_host.dart';
+import 'package:mosaic/ui/studio_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mosaic/models.dart';
@@ -203,7 +205,7 @@ void main() {
     final s = Settings()..fitSheetWidth = false;
     var changed = 0;
     await tester.pumpWidget(
-      MaterialApp(
+      StudioTestApp(
         home: Scaffold(
           body: SingleChildScrollView(
             child: Padding(
@@ -218,15 +220,16 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    final chip = find.widgetWithText(ChoiceChip, '9:16').first;
+    final chip = find.widgetWithText(StudioChoice, '9:16').first;
     await tester.ensureVisible(chip);
     await tester.tap(chip);
     await tester.pump();
     expect(s.thumbnailAspect, '9:16');
     expect(changed, 1);
     expect(tester.takeException(), isNull);
-    final canvasChip = find.widgetWithText(ChoiceChip, '16:9').last;
+    final canvasChip = find.widgetWithText(StudioChoice, '16:9').last;
     await tester.ensureVisible(canvasChip);
     await tester.tap(canvasChip);
     await tester.pump();

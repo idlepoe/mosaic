@@ -1,3 +1,5 @@
+import 'support/studio_test_host.dart';
+import 'package:mosaic/ui/studio_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mosaic/models.dart';
@@ -81,7 +83,7 @@ void main() {
         ..rows = 5
         ..autoArrange = true;
       await tester.pumpWidget(
-        MaterialApp(
+        StudioTestApp(
           home: Scaffold(
             body: SingleChildScrollView(
               child: StatefulBuilder(
@@ -95,6 +97,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
       final plus = find.byTooltip('열 늘리기');
       await tester.ensureVisible(plus);
       expect(
@@ -105,7 +108,7 @@ void main() {
             .onPressed,
         isNull,
       );
-      final preset = find.widgetWithText(ChoiceChip, '36개');
+      final preset = find.widgetWithText(StudioChoice, '36개');
       await tester.ensureVisible(preset);
       await tester.tap(preset);
       await tester.pumpAndSettle();
@@ -123,7 +126,7 @@ void main() {
       ..fitSheetWidth = false
       ..sheetAspect = '9:16';
     await tester.pumpWidget(
-      MaterialApp(
+      StudioTestApp(
         home: Scaffold(
           body: SingleChildScrollView(
             child: LayoutControls(
@@ -135,7 +138,7 @@ void main() {
         ),
       ),
     );
-    final ratio = find.widgetWithText(ChoiceChip, '16:9').last;
+    final ratio = find.widgetWithText(StudioChoice, '16:9').last;
     await tester.ensureVisible(ratio);
     await tester.tap(ratio, warnIfMissed: false);
     await tester.pump();
