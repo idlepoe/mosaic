@@ -1,6 +1,8 @@
+import 'l10n/app_language.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
@@ -15,29 +17,58 @@ import 'layout_controls.dart';
 import 'queue_thumbnail.dart';
 import 'settings_group.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppLanguage.instance.load();
   runApp(const MosaicApp());
 }
 
-class MosaicApp extends StatelessWidget {
+class MosaicApp extends StatefulWidget {
   const MosaicApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Mosaic',
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff008768)),
-      useMaterial3: true,
-    ),
-    darkTheme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xff61d9b1),
-        brightness: Brightness.dark,
+  State<MosaicApp> createState() => _MosaicAppState();
+}
+
+class _MosaicAppState extends State<MosaicApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) =>
+      AppLanguage.instance.deviceLocalesChanged();
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: AppLanguage.instance,
+    builder: (context, _) => MaterialApp(
+      locale: AppLanguage.instance.value,
+      supportedLocales: AppLanguage.supported,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      localeListResolutionCallback: (locales, supported) =>
+          AppLanguage.resolve(AppLanguage.instance.value, locales ?? []),
+      title: 'Mosaic',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xff008768)),
+        useMaterial3: true,
       ),
-      useMaterial3: true,
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Color(0xff61d9b1),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      home: HomePage(),
     ),
-    home: const HomePage(),
   );
 }
 
@@ -104,7 +135,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       }
     } catch (_) {
-      message('설정을 불러오지 못해 기본값을 사용합니다.');
+      message(tr('couldNotLoadSettingsUsingDefaults'));
     }
     if (mounted) setState(() => ready = true);
   }
@@ -130,7 +161,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       } else {
         final picked =
-            await const MethodChannel(
+            await MethodChannel(
               'mosaic/gallery',
             ).invokeListMethod<dynamic>('pickVideos') ??
             [];
@@ -174,13 +205,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             /* Preview failure does not prevent video processing. */
           }
         } catch (e) {
-          if (mounted) setState(() => item.status = '정보 확인 실패: $e');
+          if (mounted) {
+            setState(() => item.setStatus('couldNotReadVideoInformation', e));
+          }
         } finally {
           if (mounted) setState(() => item.thumbnailLoading = false);
         }
       }
     } catch (e) {
-      message('파일 선택 실패: $e');
+      message(tr('couldNotSelectFiles', [errorText(e)]));
     } finally {
       if (mounted) setState(() => picking = false);
     }
@@ -193,7 +226,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     setState(() {
       busy = true;
       progress = 0;
-      step = '영상 정보 확인 중';
+      step = tr('readingVideoInformation');
     });
     try {
       await WakelockPlus.enable();
@@ -201,7 +234,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       for (var i = 0; i < queue.length; i++) {
         processor.checkCancelled();
         final item = queue[i];
-        setState(() => item.status = '처리 중');
+        setState(() => item.setStatus('processing'));
         try {
           await processor.generate(
             item,
@@ -218,24 +251,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               if (mounted) setState(() => results.insert(0, file));
             },
           );
-          if (mounted) setState(() => item.status = '완료');
+          if (mounted) setState(() => item.setStatus('done'));
         } on JobCancelled {
-          item.status = '취소됨';
+          item.setStatus('canceled');
           rethrow;
         } catch (e) {
-          if (mounted) setState(() => item.status = '실패: $e');
+          if (mounted) setState(() => item.setStatus('failed', e));
         }
       }
       if (mounted) {
         setState(() {
           progress = 1;
-          step = '처리가 끝났습니다. 파일별 상태를 확인하세요.';
+          step = tr('processingFinishedCheckTheStatusOf');
         });
       }
     } on JobCancelled {
-      message('작업을 취소했습니다. 완료된 결과는 보관됩니다.');
+      message(tr('processingCanceledCompletedResultsAreRetained'));
     } catch (e) {
-      message('처리 실패: $e');
+      message(tr('processingFailed', [errorText(e)]));
     } finally {
       await WakelockPlus.disable();
       if (mounted) setState(() => busy = false);
@@ -259,13 +292,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
+              child: Text(tr('close')),
             ),
           ],
         ),
       );
     } catch (e) {
-      message('$e');
+      message(errorText(e));
     } finally {
       if (mounted) setState(() => picking = false);
     }
@@ -275,12 +308,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (saving) return;
     setState(() => saving = true);
     try {
-      await const MethodChannel(
+      await MethodChannel(
         'mosaic/gallery',
       ).invokeMapMethod<String, dynamic>('save', {'path': file.path});
-      message('갤러리의 Mosaic 앨범에 저장했습니다.');
+      message(tr('savedToTheMosaicAlbumIn'));
     } catch (e) {
-      message('갤러리 저장 실패: $e');
+      message(tr('couldNotSaveToGallery', [errorText(e)]));
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -305,14 +338,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _saveToFolder(GeneratedFile file) async {
     try {
-      final saved = await const MethodChannel('mosaic/storage')
-          .invokeMethod<bool>('export', {
-            'path': file.path,
-            'name': p.basename(file.path),
-          });
-      if (saved == true) message('선택한 위치에 저장했습니다.');
+      final saved = await MethodChannel('mosaic/storage').invokeMethod<bool>(
+        'export',
+        {'path': file.path, 'name': p.basename(file.path)},
+      );
+      if (saved == true) message(tr('savedToTheSelectedLocation'));
     } catch (e) {
-      message('저장 실패: $e');
+      message(tr('couldNotSave', [errorText(e)]));
     }
   }
 
@@ -320,30 +352,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) => PopScope(
     canPop: !busy,
     onPopInvokedWithResult: (didPop, _) {
-      if (!didPop && busy) message('작업을 취소한 뒤 앱을 종료해 주세요.');
+      if (!didPop && busy) message(tr('cancelProcessingBeforeClosingTheApp'));
     },
     child: Scaffold(
       appBar: AppBar(
-        title: const Text('Mosaic'),
+        title: Text('Mosaic'),
         actions: [
           IconButton(
-            tooltip: '앱 정보',
-            icon: const Icon(Icons.info_outline),
+            tooltip: tr('language'),
+            icon: Icon(Icons.language),
+            onPressed: _chooseLanguage,
+          ),
+          IconButton(
+            tooltip: tr('about'),
+            icon: Icon(Icons.info_outline),
             onPressed: () => showAboutDialog(
               context: context,
               applicationName: 'Mosaic Android',
-              applicationVersion: '1.1.0',
-              children: [
-                const Text(
-                  'Mosaic을 참고한 Flutter 포팅. 영상은 기기 안에서 처리합니다.\n\n백그라운드로 이동하면 작업을 취소합니다. Dolby Vision은 제외하며 HDR은 엔진이 지원할 때 변환합니다.\n\n원본: github.com/mosaicvideo/mosaic\nMosaic contributors · MIT\n영상 처리: FFmpegKit full (LGPL).',
-                ),
-              ],
+              applicationVersion: '1.2.0',
+              children: [Text(tr('aFlutterPortInspiredByMosaic'))],
             ),
           ),
         ],
       ),
       body: !ready
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : SafeArea(
               child: IndexedStack(
                 index: page,
@@ -353,20 +386,65 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       bottomNavigationBar: NavigationBar(
         selectedIndex: page,
         onDestinationSelected: (i) => setState(() => page = i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.video_library_outlined),
-            label: '동영상',
+            label: tr('videos'),
           ),
-          NavigationDestination(icon: Icon(Icons.tune), label: '설정'),
+          NavigationDestination(icon: Icon(Icons.tune), label: tr('settings')),
           NavigationDestination(
             icon: Icon(Icons.collections_outlined),
-            label: '결과',
+            label: tr('results'),
           ),
         ],
       ),
     ),
   );
+  Future<void> _chooseLanguage() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr('language')),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Text(tr('languageHint')),
+          ),
+          for (final entry in {
+            'system': tr('system'),
+            'ko': '한국어',
+            'en': 'English',
+            'ja': '日本語',
+          }.entries)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, entry.key),
+              child: Row(
+                children: [
+                  Icon(
+                    (AppLanguage.instance.value?.languageCode ?? 'system') ==
+                            entry.key
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(entry.value)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (choice != null) {
+      try {
+        await AppLanguage.instance.select(
+          choice == 'system' ? null : Locale(choice),
+        );
+      } catch (e) {
+        message(tr('couldNotSave', [errorText(e)]));
+      }
+    }
+  }
+
   VideoMetadata? get selectedMetadata =>
       queue.map((q) => q.metadata).whereType<VideoMetadata>().firstOrNull;
 
@@ -374,19 +452,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     children: [
       Expanded(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20),
           children: [
             Container(
-              padding: const EdgeInsets.all(22),
+              padding: EdgeInsets.all(22),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [Color(0xff064e3b), Color(0xff0f766e)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -408,7 +486,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                   SizedBox(height: 18),
                   Text(
-                    '영상의 순간을,\n원하는 비율로.',
+                    tr('yourVideoMomentsInTheRight'),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -418,35 +496,39 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                   SizedBox(height: 12),
                   Text(
-                    '원본 비율 유지 · 짧은 영상 자동 조절\n모든 처리는 내 기기 안에서',
+                    tr('preserveSourceProportionsAdaptToShort'),
                     style: TextStyle(color: Color(0xffccfbf1), height: 1.6),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             FilledButton.icon(
               onPressed: busy || picking ? null : _pick,
-              icon: const Icon(Icons.add_rounded),
+              icon: Icon(Icons.add_rounded),
               label: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                child: Text(picking ? '동영상 분석 중…' : '갤러리에서 동영상 선택'),
+                padding: EdgeInsets.symmetric(vertical: 13),
+                child: Text(
+                  picking
+                      ? tr('analyzingVideos')
+                      : tr('selectVideosFromGallery'),
+                ),
               ),
             ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: busy || picking ? null : () => _pick(files: true),
-                icon: const Icon(Icons.folder_open, size: 16),
-                label: const Text('파일에서 선택'),
+                icon: Icon(Icons.folder_open, size: 16),
+                label: Text(tr('selectFiles')),
               ),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             for (final item in queue)
               Card(
                 elevation: 0,
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
@@ -461,11 +543,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                   onTap: busy || picking ? null : () => _info(item),
                   trailing: IconButton(
-                    tooltip: '목록에서 제거',
+                    tooltip: tr('removeFromList'),
                     onPressed: busy || picking
                         ? null
                         : () => _removeQueueItem(item),
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close),
                   ),
                 ),
               ),
@@ -474,19 +556,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: busy || picking ? null : _clearQueue,
-                  child: const Text('목록 비우기'),
+                  child: Text(tr('clearList')),
                 ),
               ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _layoutSummary(),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             Text(
-              '무엇을 만들까요?',
+              tr('whatWouldYouLikeToCreate'),
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) => Wrap(
                 spacing: 10,
@@ -500,15 +582,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-            const Row(
+            SizedBox(height: 18),
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.info_outline, size: 16),
                 SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '처리 중에는 앱을 열어 두세요. 다른 앱으로 이동하면 취소됩니다.',
+                    tr('keepTheAppOpenWhileProcessing'),
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
@@ -518,7 +600,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ),
       Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           border: Border(
@@ -532,12 +614,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           children: [
             if (step.isNotEmpty) ...[
               Text(step, maxLines: 2, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(value: progress, minHeight: 5),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
             ],
             FilledButton.icon(
               onPressed: busy
@@ -549,13 +631,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   : _start,
               icon: Icon(busy ? Icons.stop_rounded : Icons.auto_awesome),
               label: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 13),
+                padding: EdgeInsets.symmetric(vertical: 13),
                 child: Text(
                   busy
-                      ? '작업 취소 · ${(progress * 100).round()}%'
+                      ? tr('cancel', [(progress * 100).round()])
                       : queue.isEmpty
-                      ? '동영상을 먼저 선택하세요'
-                      : '${queue.length}개 동영상으로 만들기',
+                      ? tr('selectAVideoFirst')
+                      : tr('createFromVideoS', [queue.length]),
                 ),
               ),
             ),
@@ -575,10 +657,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       Icons.motion_photos_on_outlined,
     ];
     final captions = [
-      '한 장의 이미지로 모아 보기',
-      '장면을 각각 이미지로 저장',
-      '짧은 구간을 이어서 재생',
-      '여러 장면이 동시에 움직여요',
+      tr('combineScenesIntoOneImage'),
+      tr('saveEachSceneAsAnImage'),
+      tr('playShortClipsInSequence'),
+      tr('animateMultipleScenesTogether'),
     ];
     return Material(
       color: selected ? colors.secondaryContainer : colors.surfaceContainerLow,
@@ -598,7 +680,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     : settings.outputs.add(kind);
               }),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -613,12 +695,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                kind.label,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
+              SizedBox(height: 12),
+              Text(kind.label, style: TextStyle(fontWeight: FontWeight.w700)),
+              SizedBox(height: 6),
               Text(
                 captions[kind.index],
                 style: Theme.of(context).textTheme.bodySmall,
@@ -638,14 +717,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         : kind == OutputKind.reel
         ? settings.reelCount
         : settings.gridCapacity;
-    var details =
-        '${kind.label} · 최대 $capacity개 · ${settings.thumbnailAspect == 'source' ? '원본 비율' : settings.thumbnailAspect}';
+    var details = tr('upToFrames', [
+      kind.label,
+      capacity,
+      settings.thumbnailAspect == 'source'
+          ? tr('sourceAspectRatio')
+          : settings.thumbnailAspect,
+    ]);
     if (m != null) {
       final samples = SamplePlan.create(settings, m, kind);
       try {
         final layout = SheetLayout.create(settings, m, kind, samples.count);
-        details =
-            '${kind.label} · ${samples.count}개 · ${layout.width} × ${layout.height}px\n${settings.adaptiveCount ? '영상 길이에 맞게 자동 조절' : '직접 지정한 개수'}';
+        details = tr('framesPx', [
+          kind.label,
+          samples.count,
+          layout.width,
+          layout.height,
+          settings.adaptiveCount
+              ? tr('automaticallyAdaptedToVideoLength')
+              : tr('manuallySelectedCount'),
+        ]);
       } on FormatException catch (e) {
         details = e.message;
       }
@@ -654,14 +745,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       elevation: 0,
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: const Icon(Icons.dashboard_customize_outlined),
-        title: const Text(
-          '비율과 배치',
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Icon(Icons.dashboard_customize_outlined),
+        title: Text(
+          tr('aspectRatioAndLayout'),
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
         subtitle: Text(details),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(Icons.chevron_right),
         onTap: () => setState(() => page = 1),
       ),
     );
@@ -670,49 +761,49 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget _settingsPage() => AbsorbPointer(
     absorbing: busy,
     child: ListView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       children: [
         Text(
-          '출력 설정',
+          tr('outputSettings'),
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Card(
           elevation: 0,
           child: ListTile(
-            title: const Text('현재 적용할 결과'),
+            title: Text(tr('selectedOutputs')),
             subtitle: Text(
               settings.outputs.isEmpty
-                  ? '선택된 결과가 없습니다. 결과 종류를 먼저 선택하세요.'
+                  ? tr('noOutputsSelectedChooseAnOutput')
                   : settings.outputs.map((e) => e.label).join(' · '),
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: Icon(Icons.chevron_right),
             onTap: () => setState(() => page = 0),
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Text(
-            '선택한 결과에 필요한 설정만 활성화됩니다. 비활성 값은 지우거나 덮어쓰지 않고 보관합니다.',
+            tr('onlySettingsNeededForSelectedOutputs'),
             style: TextStyle(fontSize: 12),
           ),
         ),
-        if (busy) const Text('작업이 끝나면 설정을 변경할 수 있습니다.'),
+        if (busy) Text(tr('settingsCanBeChangedAfterProcessing')),
         LayoutControls(
           settings: settings,
           metadata: selectedMetadata,
           onChanged: () => _change(() {}),
         ),
         SettingsGroup(
-          title: '4. 추출과 해상도',
-          description: '선택한 모든 출력에 공통 적용',
+          title: tr('samplingAndResolution'),
+          description: tr('sharedByAllSelectedOutputs'),
           enabled: settings.outputs.isNotEmpty,
-          disabledReason: '생성할 결과를 선택하세요.',
+          disabledReason: tr('chooseAnOutputToGenerate'),
           children: [
             _slider(
-              '출력 너비 (px)',
+              tr('outputWidthPx'),
               settings.width.toDouble(),
               320,
               1920,
@@ -721,20 +812,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('영상 길이에 맞춰 개수 줄이기'),
-              subtitle: const Text('최대 개수와 배치 값을 바꾸지 않고 실제 추출 개수만 줄입니다.'),
+              title: Text(tr('reduceCountForShorterVideos')),
+              subtitle: Text(tr('reducesTheActualSampleCountWithout')),
               value: settings.adaptiveCount,
               onChanged: (v) => _change(() => settings.adaptiveCount = v),
             ),
             _controlled(
               settings.adaptiveCount,
-              '자동 개수 조절이 꺼져 있어 간격 설정을 사용하지 않습니다.',
+              tr('samplingIntervalIsInactiveWhileAutomatic'),
               Wrap(
                 spacing: 8,
                 children: [
                   for (final n in [1.0, 2.0, 5.0, 10.0])
                     ChoiceChip(
-                      label: Text('${n.round()}초당 1개'),
+                      label: Text(tr('framePerSeconds', [n.round()])),
                       selected: settings.sampleInterval == n,
                       onSelected: (_) =>
                           _change(() => settings.sampleInterval = n),
@@ -745,20 +836,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ],
         ),
         SettingsGroup(
-          title: '5. 정적 이미지',
-          description: '썸네일 모음 · 개별 스크린샷',
+          title: tr('stillImages'),
+          description: tr('contactSheetsAndIndividualScreenshots'),
           enabled: settings.stillEnabled,
-          disabledReason: '정적 모음 또는 스크린샷을 선택하면 활성화됩니다.',
+          disabledReason: tr('enabledWhenAStillSheetOr'),
           children: [
-            _choice('이미지 형식', settings.imageFormat, [
-              'jpg',
-              'png',
-            ], (v) => settings.imageFormat = v),
+            _choice(
+              tr('imageFormat'),
+              settings.imageFormat,
+              ['jpg', 'png'],
+              (v) => settings.imageFormat = v,
+            ),
             _controlled(
               settings.imageFormat == 'jpg',
-              'PNG는 무손실 형식입니다. JPEG 품질 값은 보관만 합니다.',
+              tr('pngIsLosslessYourJpegQuality'),
               _slider(
-                'JPEG 품질',
+                tr('jpegQuality'),
                 settings.jpegQuality.toDouble(),
                 40,
                 100,
@@ -768,9 +861,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             _controlled(
               settings.outputs.contains(OutputKind.screenshots),
-              '개별 스크린샷을 선택하면 최대 개수를 조절할 수 있습니다.',
+              tr('selectIndividualScreenshotsToAdjustTheir'),
               _slider(
-                '스크린샷 최대 개수',
+                tr('maximumScreenshots'),
                 settings.screenshotCount.toDouble(),
                 1,
                 100,
@@ -781,16 +874,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ],
         ),
         SettingsGroup(
-          title: '6. 애니메이션',
-          description: '움직이는 미리보기 · 움직이는 모음',
+          title: tr('animation'),
+          description: tr('animatedPreviewsAndAnimatedSheets'),
           enabled: settings.animationEnabled,
-          disabledReason: '움직이는 출력을 선택하면 활성화됩니다.',
+          disabledReason: tr('enabledWhenAnimatedOutputsAreSelected'),
           children: [
             _controlled(
               settings.outputs.contains(OutputKind.reel),
-              '움직이는 모음은 WebP로 고정됩니다. 미리보기 형식 값은 보관됩니다.',
+              tr('animatedSheetsAlwaysUseWebpYour'),
               _choice(
-                '미리보기 형식',
+                tr('previewFormat'),
                 settings.animationFormat,
                 ['webp', 'gif', 'webm'],
                 (v) => settings.animationFormat = v,
@@ -798,9 +891,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             _controlled(
               settings.outputs.contains(OutputKind.reel),
-              '움직이는 미리보기를 선택하면 구간 개수를 조절할 수 있습니다.',
+              tr('selectAnimatedPreviewsToAdjustTheir'),
               _slider(
-                '미리보기 최대 구간 수',
+                tr('maximumPreviewClips'),
                 settings.reelCount.toDouble(),
                 1,
                 100,
@@ -809,7 +902,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
             ),
             _slider(
-              '구간 길이 (초) · 움직이는 출력 공통',
+              tr('clipDurationSecondsAllAnimations'),
               settings.clipSeconds,
               .5,
               5,
@@ -817,7 +910,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               (v) => settings.clipSeconds = v,
             ),
             _slider(
-              'FPS · 움직이는 출력 공통',
+              tr('fpsAllAnimations'),
               settings.fps.toDouble(),
               4,
               15,
@@ -826,9 +919,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             _controlled(
               settings.webpQualityEnabled,
-              'GIF와 WebM에는 WebP 품질을 적용하지 않습니다. 이전 값은 보관됩니다.',
+              tr('webpQualityDoesNotApplyTo'),
               _slider(
-                'WebP 품질',
+                tr('webpQuality'),
                 settings.webpQuality.toDouble(),
                 40,
                 100,
@@ -839,16 +932,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ],
         ),
         SettingsGroup(
-          title: '7. 표시와 간격',
-          description: '지원되는 출력에만 표시됩니다.',
+          title: tr('overlaysAndSpacing'),
+          description: tr('appliesOnlyToSupportedOutputs'),
           enabled: settings.timestampEnabled || settings.gridEnabled,
-          disabledReason: '미리보기 영상에는 헤더·시간 표시가 적용되지 않습니다.',
+          disabledReason: tr('headersAndTimestampsDoNotApply'),
           children: [
             _controlled(
               settings.gridEnabled,
-              '모음 출력에서만 칸 사이 간격을 사용합니다.',
+              tr('cellSpacingIsUsedOnlyFor'),
               _slider(
-                '칸 사이 간격 (px)',
+                tr('cellSpacingPx'),
                 settings.gap.toDouble(),
                 0,
                 24,
@@ -858,8 +951,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('시간 표시'),
-              subtitle: const Text('정적 이미지와 움직이는 모음의 구간 시작 시각'),
+              title: Text(tr('timestamps')),
+              subtitle: Text(tr('clipStartTimesOnStillImages')),
               value: settings.timestamps,
               onChanged: settings.timestampEnabled
                   ? (v) => _change(() => settings.timestamps = v)
@@ -867,8 +960,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('파일 정보 헤더'),
-              subtitle: const Text('모음 출력 전용'),
+              title: Text(tr('fileInformationHeader')),
+              subtitle: Text(tr('sheetOutputsOnly')),
               value: settings.header,
               onChanged: settings.gridEnabled
                   ? (v) => _change(() => settings.header = v)
@@ -876,8 +969,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('어두운 출력 배경'),
-              subtitle: const Text('모음 또는 비율 맞춤의 여백에 적용'),
+              title: Text(tr('darkOutputBackground')),
+              subtitle: Text(tr('appliesToSheetBackgroundsAndAspect')),
               value: settings.dark,
               onChanged:
                   settings.gridEnabled ||
@@ -889,14 +982,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ],
         ),
         SettingsGroup(
-          title: '8. 파일 이름',
-          description: '선택된 모든 결과의 이름에 적용',
+          title: tr('fileNames'),
+          description: tr('appliesToTheNamesOfAll'),
           children: [
             TextFormField(
               initialValue: settings.suffix,
-              decoration: const InputDecoration(
-                labelText: '파일명 접미사',
-                helperText: '비우면 종류별 기본 이름 · 기존 파일은 덮어쓰지 않습니다.',
+              decoration: InputDecoration(
+                labelText: tr('fileNameSuffix'),
+                helperText: tr('leaveEmptyForDefaultNamesExisting'),
               ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9_-]')),
@@ -907,9 +1000,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 _persist();
               },
             ),
-            const SizedBox(height: 12),
-            const Text(
-              '갤러리 저장은 Mosaic 앨범에 새 복사본을 만듭니다. 원본 영상과 기존 결과는 덮어쓰지 않습니다.',
+            SizedBox(height: 12),
+            Text(
+              tr('savingToGalleryCreatesANew'),
               style: TextStyle(fontSize: 12),
             ),
           ],
@@ -933,7 +1026,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       ),
       if (!enabled)
         Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 8),
+          padding: EdgeInsets.only(top: 4, bottom: 8),
           child: Text(reason, style: Theme.of(context).textTheme.bodySmall),
         ),
     ],
@@ -953,7 +1046,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   ) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       Text(
         '$title: ${value == value.roundToDouble() ? value.round() : value.toStringAsFixed(1)}',
       ),
@@ -983,15 +1076,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     ),
   );
   Widget _resultsPage() => results.isEmpty
-      ? const Center(child: Text('완성된 결과가 여기에 표시됩니다.'))
+      ? Center(child: Text(tr('completedResultsWillAppearHere')))
       : ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           itemCount: results.length,
           itemBuilder: (context, i) {
             final file = results[i];
             return Card(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1008,7 +1101,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           fit: BoxFit.fitWidth,
                           width: double.infinity,
                           cacheWidth: 640,
-                          errorBuilder: (_, error, stack) => const Center(
+                          errorBuilder: (_, error, stack) => Center(
                             child: Icon(Icons.image_outlined, size: 48),
                           ),
                         ),
@@ -1021,10 +1114,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             builder: (_) => PreviewPage(path: file.path),
                           ),
                         ),
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('미리보기 재생'),
+                        icon: Icon(Icons.play_arrow),
+                        label: Text(tr('playPreview')),
                       ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       p.basename(file.path),
                       maxLines: 2,
@@ -1035,8 +1128,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       children: [
                         TextButton.icon(
                           onPressed: busy || saving ? null : () => _save(file),
-                          icon: const Icon(Icons.save_alt),
-                          label: Text(saving ? '저장 중…' : '갤러리 저장'),
+                          icon: Icon(Icons.save_alt),
+                          label: Text(
+                            saving ? tr('saving') : tr('saveToGallery'),
+                          ),
                         ),
                         TextButton.icon(
                           onPressed: busy
@@ -1047,39 +1142,41 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                       ShareParams(files: [XFile(file.path)]),
                                     );
                                   } catch (e) {
-                                    message('공유 실패: $e');
+                                    message(
+                                      tr('couldNotShare', [errorText(e)]),
+                                    );
                                   }
                                 },
-                          icon: const Icon(Icons.share_outlined),
-                          label: const Text('공유'),
+                          icon: Icon(Icons.share_outlined),
+                          label: Text(tr('share')),
                         ),
                         IconButton(
-                          tooltip: '다른 위치에 파일로 저장',
+                          tooltip: tr('saveFileToAnotherLocation'),
                           onPressed: busy || saving
                               ? null
                               : () => _saveToFolder(file),
-                          icon: const Icon(Icons.folder_copy_outlined),
+                          icon: Icon(Icons.folder_copy_outlined),
                         ),
                         IconButton(
-                          tooltip: '결과 삭제',
+                          tooltip: tr('deleteResult'),
                           onPressed: busy
                               ? null
                               : () async {
                                   final yes = await showDialog<bool>(
                                     context: context,
                                     builder: (context) => AlertDialog(
-                                      title: const Text('결과를 삭제할까요?'),
+                                      title: Text(tr('deleteThisResult')),
                                       content: Text(p.basename(file.path)),
                                       actions: [
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.pop(context, false),
-                                          child: const Text('취소'),
+                                          child: Text(tr('cancel2')),
                                         ),
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.pop(context, true),
-                                          child: const Text('삭제'),
+                                          child: Text(tr('delete')),
                                         ),
                                       ],
                                     ),
@@ -1091,11 +1188,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         setState(() => results.remove(file));
                                       }
                                     } catch (e) {
-                                      message('삭제 실패: $e');
+                                      message(
+                                        tr('couldNotDelete', [errorText(e)]),
+                                      );
                                     }
                                   }
                                 },
-                          icon: const Icon(Icons.delete_outline),
+                          icon: Icon(Icons.delete_outline),
                         ),
                       ],
                     ),
@@ -1134,7 +1233,7 @@ class _PreviewPageState extends State<PreviewPage> {
       if (mounted) setState(() {});
     } catch (_) {
       if (mounted) {
-        setState(() => error = '이 기기에서 재생할 수 없습니다. 저장 또는 공유하여 확인하세요.');
+        setState(() => error = tr('thisDeviceCannotPlayThisFile'));
       }
     }
   }
@@ -1147,9 +1246,9 @@ class _PreviewPageState extends State<PreviewPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xff090e17),
+    backgroundColor: Color(0xff090e17),
     appBar: AppBar(
-      backgroundColor: const Color(0xff090e17),
+      backgroundColor: Color(0xff090e17),
       foregroundColor: Colors.white,
       title: Text(
         p.basename(widget.path),
@@ -1166,7 +1265,7 @@ class _PreviewPageState extends State<PreviewPage> {
                     aspectRatio: controller!.value.aspectRatio,
                     child: VideoPlayer(controller!),
                   )
-                : const CircularProgressIndicator()
+                : CircularProgressIndicator()
           : InteractiveViewer(
               maxScale: 6,
               child: Image.file(File(widget.path)),

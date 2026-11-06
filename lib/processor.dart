@@ -1,3 +1,4 @@
+import 'l10n/app_language.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -70,7 +71,8 @@ class MosaicProcessor {
           if (_cancelled || ReturnCode.isCancel(code)) {
             finished.completeError(JobCancelled());
           } else if (!ReturnCode.isSuccess(code)) {
-            final logs = await session.getOutput() ?? '영상 처리 실패';
+            final logs =
+                await session.getOutput() ?? tr('videoProcessingFailed');
             finished.completeError(
               Exception(
                 logs.length > 1600 ? logs.substring(logs.length - 1600) : logs,
@@ -110,7 +112,7 @@ class MosaicProcessor {
     ]);
     checkCancelled();
     if (!ReturnCode.isSuccess(await session.getReturnCode())) {
-      throw Exception('동영상 정보를 읽지 못했습니다. 파일 형식을 확인하세요.');
+      throw Exception(tr('couldNotReadVideoInformationCheck'));
     }
     final raw = await session.getOutput() ?? '{}';
     final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -128,7 +130,7 @@ class MosaicProcessor {
           video['tags']?['rotate'] == null) {
         int? rotation;
         try {
-          rotation = await const MethodChannel(
+          rotation = await MethodChannel(
             'mosaic/media',
           ).invokeMethod<int>('rotation', {'path': path});
         } on PlatformException {
@@ -208,7 +210,7 @@ class MosaicProcessor {
         output,
       ]);
       if (!await File(output).exists()) {
-        throw const FormatException('미리보기 프레임을 추출하지 못했습니다.');
+        throw FormatException(tr('couldNotExtractAPreviewFrame'));
       }
       return output;
     } catch (_) {
@@ -232,9 +234,7 @@ class MosaicProcessor {
 
   Future<String> _tone(VideoMetadata m) async {
     if (m.dolbyVision) {
-      throw Exception(
-        'Dolby Vision은 이 모바일 버전에서 정확한 색상을 보장할 수 없어 제외했습니다. SDR 영상으로 변환 후 선택하세요.',
-      );
+      throw Exception(tr('dolbyVisionIsExcludedBecauseThis'));
     }
     if (!m.hdr) return '';
     if (_zscale == null) {
@@ -246,7 +246,7 @@ class MosaicProcessor {
     }
     checkCancelled();
     if (!_zscale!) {
-      throw Exception('이 FFmpeg 빌드에는 HDR 색상 변환 기능이 없습니다. SDR 영상을 사용하세요.');
+      throw Exception(tr('thisFfmpegBuildDoesNotSupport'));
     }
     return 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,';
   }
@@ -438,7 +438,7 @@ class MosaicProcessor {
           args.add(output);
           progress(
             (completedKinds + .95) / s.outputs.length,
-            '${kind.label} 인코딩 중',
+            tr('encoding', [kind.label]),
           );
           await run(args);
           final result = await _commit(
@@ -455,7 +455,7 @@ class MosaicProcessor {
         }
         completedKinds++;
       }
-      progress(1, '완료');
+      progress(1, tr('done'));
       return outputs;
     } finally {
       await work.delete(recursive: true);
@@ -613,10 +613,10 @@ class MosaicProcessor {
     final w = layout.width, h = layout.height;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    final fg = s.dark ? Colors.white : const Color(0xff111827);
+    final fg = s.dark ? Colors.white : Color(0xff111827);
     if (!transparent) {
       canvas.drawColor(
-        s.dark ? const Color(0xff111827) : const Color(0xfff4f5f7),
+        s.dark ? Color(0xff111827) : Color(0xfff4f5f7),
         BlendMode.src,
       );
     }
@@ -641,9 +641,9 @@ class MosaicProcessor {
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromLTWH(x - 3, y - 2, painter.width + 6, painter.height + 4),
-            const Radius.circular(3),
+            Radius.circular(3),
           ),
-          Paint()..color = const Color(0xb3000000),
+          Paint()..color = Color(0xb3000000),
         );
       }
       painter.paint(canvas, Offset(x, y));

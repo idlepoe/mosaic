@@ -2,7 +2,12 @@
 
 An Android app built with Flutter that creates video contact sheets, screenshots, animated previews, and animated contact sheets directly on your phone. Videos are processed locally with bundled FFmpeg and FFprobe libraries; no server, account, or separate command-line tool installation is required. The current app interface is in Korean.
 
-**[Published releases](https://github.com/idlepoe/mosaic/releases)** · Current version: **1.1.0+4**
+**[Published releases](https://github.com/idlepoe/mosaic/releases)** · Current version: **1.2.0+5**
+
+## Version 1.2 localization
+
+Korean, English, and Japanese are available through the app bar language button.
+The default follows the device language, with English fallback. See [localization](docs/LOCALIZATION.md) for behavior, maintenance, and verification.
 
 ## Version 1.1 improvements
 
@@ -75,7 +80,7 @@ Additional features include multiple-file selection, a sequential processing que
 
 ## Screenshots
 
-The current **1.1.0+4** settings separate conflicting modes and disable inapplicable controls:
+The current **1.2.0+5** settings separate conflicting modes and disable inapplicable controls:
 
 | Grouped settings | Automatic / manual modes | Output-specific controls |
 |:---:|:---:|:---:|
@@ -167,11 +172,11 @@ Build an ARM64 release-mode APK:
 flutter build apk --release --target-platform android-arm64 --split-per-abi
 ```
 
-Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (approximately 45.3 MB for the tested build).
+Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (approximately 45.8 MB for the tested build).
 
 Release builds require an untracked `android/key.properties` containing `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. `storeFile` may point to a keystore outside this repository. The build fails if release signing is missing; it never falls back to debug signing. Both signing properties and keystore files are excluded from Git. Never commit signing credentials or attach them to a release.
 
-The current build is version **1.1.0+4** and uses the local release key configured using the same approach as the `gps_gallery` project. The earlier physical-device tests below used build **1.0.0+1** with development signing. Android cannot install the release-signed APK over that development-signed installation; use a fresh installation or a device already using the same release key. Preserve any needed app-private results before removing an older installation. Debug builds use a separate `.dev` application ID.
+The current build is version **1.2.0+5** and uses the local release key configured using the same approach as the `gps_gallery` project. The earlier physical-device tests below used build **1.0.0+1** with development signing. Android cannot install the release-signed APK over that development-signed installation; use a fresh installation or a device already using the same release key. Preserve any needed app-private results before removing an older installation. Debug builds use a separate `.dev` application ID.
 
 ## Project structure
 
@@ -206,3 +211,19 @@ The subsequent **scrcpy manual test passed** video selection, settings changes, 
 ## Licenses and acknowledgments
 
 The original Mosaic project is licensed under MIT; its copyright and license text are retained in [LICENSE](LICENSE). FFmpegKit, FFmpeg, and bundled native components have their own licenses. This project uses the full package without the optional GPL codec bundle; the Mosaic MIT license does not cover those native binaries. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency attribution and distribution notes.
+
+
+## Languages
+
+Mosaic supports Korean, English, and Japanese. The default follows the device's
+preferred supported language and falls back to English. Tap the language icon in
+the top app bar to choose a language or return to **System default**. Changes apply
+immediately and persist across restarts independently of video settings.
+
+Navigation, grouped settings, preview summaries, processing statuses, validation
+errors, and gallery/save/share messages are translated. Flutter's standard dialogs
+use the selected locale. Android's gallery and file picker follow the operating
+system's language; codec names, user file names, and engine diagnostics are kept as
+provided by their source. Changing language does not modify existing exported images.
+
+See [localization maintenance and verification](docs/LOCALIZATION.md).

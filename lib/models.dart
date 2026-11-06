@@ -1,11 +1,16 @@
+import 'l10n/app_language.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 
 enum OutputKind { sheet, screenshots, reel, animatedSheet }
 
 extension OutputLabel on OutputKind {
-  String get label =>
-      const ['썸네일 모음', '개별 스크린샷', '움직이는 미리보기', '움직이는 썸네일 모음'][index];
+  String get label => [
+    tr('contactSheet'),
+    tr('individualScreenshots'),
+    tr('animatedPreview'),
+    tr('animatedContactSheet'),
+  ][index];
 }
 
 class Settings {
@@ -292,9 +297,7 @@ class SheetLayout {
         height = ch * rows + gap * (rows - 1) + 2 * outer + header;
       }
       if (cw < 16 || ch < 16 || height <= header) {
-        throw const FormatException(
-          '선택한 비율에 비해 칸이 너무 많습니다. 행·열을 줄이거나 출력 너비를 늘려 주세요.',
-        );
+        throw FormatException(tr('tooManyCellsForThisAspect'));
       }
       if (width * height <= budget && height <= 8192) {
         final gw = cw * cols + gap * (cols - 1),
@@ -323,7 +326,7 @@ class SheetLayout {
                   .95)
               .floor();
     }
-    throw const FormatException('출력 크기를 계산하지 못했습니다. 행·열을 줄여 주세요.');
+    throw FormatException(tr('couldNotCalculateTheOutputSize'));
   }
 }
 
@@ -335,14 +338,14 @@ VideoMetadata parseVideoMetadata(Map<String, dynamic> j) {
         s['codec_type'] == 'video' &&
         (s['disposition']?['attached_pic'] ?? 0) != 1,
   );
-  if (videos.isEmpty) throw const FormatException('영상 트랙이 없는 파일입니다.');
+  if (videos.isEmpty) throw FormatException(tr('thisFileHasNoVideoTrack'));
   final v = videos.first;
   final videoDuration = double.tryParse('${v['duration']}') ?? 0;
   final duration = videoDuration > 0
       ? videoDuration
       : double.tryParse('${j['format']?['duration']}') ?? 0;
   if (!duration.isFinite || duration <= 0) {
-    throw const FormatException('길이를 확인할 수 없는 영상은 지원하지 않습니다.');
+    throw FormatException(tr('videosWithAnUnknownDurationAre'));
   }
   var width = (v['width'] as num?)?.toDouble() ?? 0;
   var height = (v['height'] as num?)?.toDouble() ?? 0;
@@ -367,7 +370,7 @@ VideoMetadata parseVideoMetadata(Map<String, dynamic> j) {
     height = (j['mosaic_display_height'] as num).toDouble();
   }
   if (width <= 0 || height <= 0) {
-    throw const FormatException('영상 크기가 올바르지 않습니다.');
+    throw FormatException(tr('invalidVideoDimensions'));
   }
   final frameRate = '${v['avg_frame_rate'] ?? v['r_frame_rate'] ?? '0/1'}'
       .split('/');
@@ -381,7 +384,7 @@ VideoMetadata parseVideoMetadata(Map<String, dynamic> j) {
     height.round(),
     '${v['codec_name'] ?? 'unknown'}',
     '${v['color_transfer'] ?? ''}',
-    const JsonEncoder.withIndent('  ').convert(j),
+    JsonEncoder.withIndent('  ').convert(j),
     streamIndex: (v['index'] as num?)?.toInt() ?? 0,
     frameSeconds: fps.isFinite && fps > 0 ? 1 / fps : 1 / 30,
     dolbyVision: side.any(
@@ -425,7 +428,15 @@ class VideoMetadata {
 class QueueItem {
   final String path, name;
   final String? sourceId;
-  String status = '대기 중';
+  String _statusKey = 'waiting';
+  Object? _statusError;
+  String get status =>
+      tr(_statusKey, [if (_statusError != null) errorText(_statusError!)]);
+  void setStatus(String key, [Object? error]) {
+    _statusKey = key;
+    _statusError = error;
+  }
+
   VideoMetadata? metadata;
   String? thumbnailPath;
   bool thumbnailLoading = false;

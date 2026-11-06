@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mosaic/models.dart';
+import 'package:mosaic/l10n/app_language.dart';
 import 'package:mosaic/layout_controls.dart';
 
 const video = VideoMetadata(120, 1920, 1080, 'h264', '', '');
 
 void main() {
+  setUp(() => AppLanguage.instance.value = const Locale('ko'));
+  tearDown(() => AppLanguage.instance.value = null);
   test('automatic arrangement keeps direct rows and columns intact', () {
     final s = Settings()
       ..columns = 4
