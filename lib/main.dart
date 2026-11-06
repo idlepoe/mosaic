@@ -369,7 +369,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onPressed: () => showAboutDialog(
               context: context,
               applicationName: 'Mosaic Android',
-              applicationVersion: '1.2.0',
+              applicationVersion: '1.2.1',
               children: [Text(tr('aFlutterPortInspiredByMosaic'))],
             ),
           ),

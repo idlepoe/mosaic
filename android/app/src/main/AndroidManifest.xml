@@ -3,7 +3,7 @@
     <application
         android:label="Mosaic"
         android:name="${applicationName}"
-        android:icon="@drawable/ic_mosaic">
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"
