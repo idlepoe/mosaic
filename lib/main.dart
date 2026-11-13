@@ -1155,7 +1155,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         '$title: ${value == value.roundToDouble() ? value.round() : value.toStringAsFixed(1)}',
       ),
       Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        // The focused thumb extends 14 px beyond either track endpoint.
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: ShadSlider(
           initialValue: value,
           min: min,
@@ -1265,6 +1266,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ),
                     Wrap(
                       alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      runSpacing: 8,
                       children: [
                         StudioButton(
                           color: Theme.of(context).colorScheme.secondary,

@@ -244,28 +244,41 @@ class LayoutControls extends StatelessWidget {
               ),
             ),
             SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _stepper(
-                    context,
-                    tr('columns'),
-                    settings.columns,
-                    (n) => change(() => settings.columns = n),
-                    enabled: !settings.autoArrange,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _stepper(
-                    context,
-                    tr('rows'),
-                    settings.rows,
-                    (n) => change(() => settings.rows = n),
-                    enabled: !settings.autoArrange,
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stacked =
+                    constraints.maxWidth <
+                    220 + MediaQuery.textScalerOf(context).scale(48);
+                final width = stacked
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: width,
+                      child: _stepper(
+                        context,
+                        tr('columns'),
+                        settings.columns,
+                        (n) => change(() => settings.columns = n),
+                        enabled: !settings.autoArrange,
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: _stepper(
+                        context,
+                        tr('rows'),
+                        settings.rows,
+                        (n) => change(() => settings.rows = n),
+                        enabled: !settings.autoArrange,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

@@ -77,7 +77,9 @@ class SettingsGroup extends StatelessWidget {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                // Focus rings paint outside control bounds; keep them inside
+                // the accordion's animated clipping region.
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
                 child: Semantics(
                   enabled: enabled,
                   child: ExcludeFocus(

@@ -274,3 +274,5 @@ Android legacy density assets and adaptive icons are generated. The adaptive ico
 uses a pale background and a 26% foreground inset to keep the head and tentacles
 within launcher masks. The manifest uses `@mipmap/ic_launcher`. iOS generation is
 disabled because this repository does not yet include an iOS application target.
+
+Settings clipping fixes and physical-device screenshots: [verification report](docs/SETTINGS_CLIPPING_QA.md).
