@@ -165,5 +165,15 @@
   "nativePick": "動画を選択できませんでした。別のギャラリーアプリかファイル選択をお試しください。",
   "nativeUnknown": "端末での操作を完了できませんでした。再試行してください。",
   "mascotCompleted": "{0}件の結果を生成しました。結果画面で確認できます。",
-  "mascotPartial": "{0}件を生成、{1}本の動画で失敗しました。各ファイルの状態を確認してください。"
+  "mascotPartial": "{0}件を生成、{1}本の動画で失敗しました。各ファイルの状態を確認してください。",
+  "selectResults": "ファイルを選択",
+  "selectedResultsCount": "全{1}件中{0}件を選択",
+  "clearResultSelection": "選択を解除",
+  "selectAllResults": "すべて選択",
+  "deleteSelected": "選択したファイルを削除",
+  "deletingResults": "削除中…",
+  "deleteSelectedResults": "選択した{0}件のファイルを削除しますか？",
+  "deleteResultsScope": "アプリ内の結果ファイルを完全に削除します。元の動画とギャラリーや他のフォルダーに保存したコピーは保持されます。",
+  "resultsDeleted": "{0}件のファイルを削除しました。",
+  "resultsDeletePartial": "{0}件を削除しました。{1}件は削除できませんでした。もう一度お試しください。"
 }

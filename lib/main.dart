@@ -87,7 +87,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final results = <GeneratedFile>[];
   Settings settings = Settings();
   bool busy = false, picking = false, ready = false;
-  bool saving = false;
+  bool saving = false, deletingResults = false, selectingResults = false;
+  final selectedResultPaths = <String>{};
   double progress = 0;
   String step = '';
   MascotPose? runPose;
@@ -240,6 +241,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _start() async {
+    if (deletingResults) return;
     if (settings.outputs.isEmpty || queue.isEmpty) return;
     final snapshot = Settings.fromJson(settings.toJson());
     processor.begin();
@@ -348,6 +350,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _save(GeneratedFile file) async {
+    if (deletingResults) return;
     if (saving) return;
     setState(() => saving = true);
     try {
@@ -383,6 +386,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _saveToFolder(GeneratedFile file) async {
+    if (busy || saving || deletingResults) return;
+    setState(() => saving = true);
     try {
       final saved = await MethodChannel('mosaic/storage').invokeMethod<bool>(
         'export',
@@ -391,6 +396,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (saved == true) message(tr('savedToTheSelectedLocation'));
     } catch (e) {
       message(tr('couldNotSave', [errorText(e)]), pose: MascotPose.error);
+    } finally {
+      if (mounted) setState(() => saving = false);
     }
   }
 
@@ -1197,6 +1204,168 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       ],
     ),
   );
+  void _toggleResult(String path) {
+    if (busy || saving || deletingResults) return;
+    setState(() {
+      selectingResults = true;
+      if (!selectedResultPaths.add(path)) selectedResultPaths.remove(path);
+    });
+  }
+
+  Future<void> _deleteResults(
+    List<GeneratedFile> files, {
+    bool bulk = false,
+  }) async {
+    if (busy || saving || deletingResults || files.isEmpty) return;
+    // Capture a stable set before opening the confirmation dialog.
+    final targets = List<GeneratedFile>.of(files);
+    setState(() => deletingResults = true);
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => ShadDialog(
+          title: Text(
+            bulk
+                ? tr('deleteSelectedResults', [targets.length])
+                : tr('deleteThisResult'),
+          ),
+          actions: [
+            StudioButton(
+              ghost: true,
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(tr('cancel2')),
+            ),
+            StudioButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(tr('delete')),
+            ),
+          ],
+          child: Text(
+            bulk
+                ? tr('deleteResultsScope')
+                : '${p.basename(targets.single.path)}\n\n${tr('deleteResultsScope')}',
+          ),
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      final removed = <String>{};
+      for (final file in targets) {
+        try {
+          await File(file.path).delete();
+          removed.add(file.path);
+        } on PathNotFoundException {
+          // A result already removed from disk should also leave the list.
+          removed.add(file.path);
+        } catch (_) {
+          // Keep failed files visible and selected so deletion can be retried.
+        }
+      }
+      if (!mounted) return;
+      final failures = targets.length - removed.length;
+      setState(() {
+        results.removeWhere((file) => removed.contains(file.path));
+        selectedResultPaths.removeAll(removed);
+        if (failures == 0) {
+          selectingResults = false;
+          selectedResultPaths.clear();
+        }
+      });
+      message(
+        failures == 0
+            ? tr('resultsDeleted', [removed.length])
+            : tr('resultsDeletePartial', [removed.length, failures]),
+      );
+    } finally {
+      if (mounted) setState(() => deletingResults = false);
+    }
+  }
+
+  Widget _resultSelectionToolbar() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (selectingResults)
+          Text(
+            tr('selectedResultsCount', [
+              selectedResultPaths.length,
+              results.length,
+            ]),
+          ),
+        Wrap(
+          alignment: WrapAlignment.end,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (!selectingResults)
+              StudioButton(
+                outline: true,
+                onPressed: busy || saving || deletingResults
+                    ? null
+                    : () => setState(() => selectingResults = true),
+                icon: const Icon(Icons.checklist),
+                child: Text(tr('selectResults')),
+              )
+            else ...[
+              StudioButton(
+                ghost: true,
+                onPressed: deletingResults
+                    ? null
+                    : () => setState(() {
+                        selectingResults = false;
+                        selectedResultPaths.clear();
+                      }),
+                child: Text(tr('cancel2')),
+              ),
+              StudioButton(
+                outline: true,
+                onPressed: busy || saving || deletingResults
+                    ? null
+                    : () => setState(() {
+                        if (selectedResultPaths.length == results.length) {
+                          selectedResultPaths.clear();
+                        } else {
+                          selectedResultPaths.addAll(
+                            results.map((file) => file.path),
+                          );
+                        }
+                      }),
+                child: Text(
+                  tr(
+                    selectedResultPaths.length == results.length
+                        ? 'clearResultSelection'
+                        : 'selectAllResults',
+                  ),
+                ),
+              ),
+              StudioButton(
+                onPressed:
+                    busy ||
+                        saving ||
+                        deletingResults ||
+                        selectedResultPaths.isEmpty
+                    ? null
+                    : () => _deleteResults(
+                        results
+                            .where(
+                              (file) => selectedResultPaths.contains(file.path),
+                            )
+                            .toList(),
+                        bulk: true,
+                      ),
+                icon: const Icon(Icons.delete_outline),
+                child: Text(
+                  tr(deletingResults ? 'deletingResults' : 'deleteSelected'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    ),
+  );
+
   Widget _resultsPage() => results.isEmpty
       ? Center(
           child: SingleChildScrollView(
@@ -1217,139 +1386,145 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
           ),
         )
-      : ListView.builder(
-          padding: EdgeInsets.all(16),
-          itemCount: results.length,
-          itemBuilder: (context, i) {
-            final file = results[i];
-            return StudioPanel(
-              child: Padding(
-                padding: EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (p.extension(file.path) != '.webm')
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => PreviewPage(path: file.path),
-                          ),
-                        ),
-                        child: Image.file(
-                          File(file.path),
-                          fit: BoxFit.fitWidth,
-                          width: double.infinity,
-                          cacheWidth: 640,
-                          errorBuilder: (_, error, stack) => Center(
-                            child: Icon(Icons.image_outlined, size: 48),
-                          ),
-                        ),
-                      )
-                    else
-                      StudioButton(
-                        outline: true,
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => PreviewPage(path: file.path),
-                          ),
-                        ),
-                        icon: Icon(Icons.play_arrow),
-                        child: Text(tr('playPreview')),
-                      ),
-                    SizedBox(height: 8),
-                    Text(
-                      p.basename(file.path),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Wrap(
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      runSpacing: 8,
-                      children: [
-                        StudioButton(
-                          color: Theme.of(context).colorScheme.secondary,
-                          onPressed: busy || saving ? null : () => _save(file),
-                          icon: Icon(Icons.save_alt),
-                          child: Text(
-                            saving ? tr('saving') : tr('saveToGallery'),
-                          ),
-                        ),
-                        StudioButton(
-                          ghost: true,
-                          onPressed: busy
-                              ? null
-                              : () async {
-                                  try {
-                                    await SharePlus.instance.share(
-                                      ShareParams(files: [XFile(file.path)]),
-                                    );
-                                  } catch (e) {
-                                    message(
-                                      tr('couldNotShare', [errorText(e)]),
-                                    );
-                                  }
-                                },
-                          icon: Icon(Icons.share_outlined),
-                          child: Text(tr('share')),
-                        ),
-                        IconButton(
-                          tooltip: tr('saveFileToAnotherLocation'),
-                          onPressed: busy || saving
-                              ? null
-                              : () => _saveToFolder(file),
-                          icon: Icon(Icons.folder_copy_outlined),
-                        ),
-                        IconButton(
-                          tooltip: tr('deleteResult'),
-                          onPressed: busy
-                              ? null
-                              : () async {
-                                  final yes = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => ShadDialog(
-                                      title: Text(tr('deleteThisResult')),
-                                      actions: [
-                                        StudioButton(
-                                          ghost: true,
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: Text(tr('cancel2')),
-                                        ),
-                                        StudioButton(
-                                          ghost: true,
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: Text(tr('delete')),
-                                        ),
-                                      ],
-                                      child: Text(p.basename(file.path)),
+      : Column(
+          children: [
+            _resultSelectionToolbar(),
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.all(16),
+                itemCount: results.length,
+                itemBuilder: (context, i) {
+                  final file = results[i];
+                  return StudioPanel(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (selectingResults) ...[
+                            ShadCheckbox(
+                              key: ValueKey('select-result:${file.path}'),
+                              value: selectedResultPaths.contains(file.path),
+                              enabled: !busy && !saving && !deletingResults,
+                              onChanged: (_) => _toggleResult(file.path),
+                              label: Text(
+                                p.basename(file.path),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          if (p.extension(file.path) != '.webm')
+                            GestureDetector(
+                              onLongPress: busy || saving || deletingResults
+                                  ? null
+                                  : () => _toggleResult(file.path),
+                              onTap: () => selectingResults
+                                  ? _toggleResult(file.path)
+                                  : Navigator.push(
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            PreviewPage(path: file.path),
+                                      ),
                                     ),
-                                  );
-                                  if (yes == true) {
-                                    try {
-                                      await File(file.path).delete();
-                                      if (mounted) {
-                                        setState(() => results.remove(file));
-                                      }
-                                    } catch (e) {
-                                      message(
-                                        tr('couldNotDelete', [errorText(e)]),
-                                      );
-                                    }
-                                  }
-                                },
-                          icon: Icon(Icons.delete_outline),
-                        ),
-                      ],
+                              child: Image.file(
+                                File(file.path),
+                                fit: BoxFit.fitWidth,
+                                width: double.infinity,
+                                cacheWidth: 640,
+                                errorBuilder: (_, error, stack) => Center(
+                                  child: Icon(Icons.image_outlined, size: 48),
+                                ),
+                              ),
+                            )
+                          else
+                            StudioButton(
+                              outline: true,
+                              onPressed: () => selectingResults
+                                  ? _toggleResult(file.path)
+                                  : Navigator.push(
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            PreviewPage(path: file.path),
+                                      ),
+                                    ),
+                              icon: Icon(Icons.play_arrow),
+                              child: Text(tr('playPreview')),
+                            ),
+                          SizedBox(height: 8),
+                          if (!selectingResults)
+                            Text(
+                              p.basename(file.path),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          if (!selectingResults)
+                            Wrap(
+                              alignment: WrapAlignment.end,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              runSpacing: 8,
+                              children: [
+                                StudioButton(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondary,
+                                  onPressed: busy || saving || deletingResults
+                                      ? null
+                                      : () => _save(file),
+                                  icon: Icon(Icons.save_alt),
+                                  child: Text(
+                                    saving ? tr('saving') : tr('saveToGallery'),
+                                  ),
+                                ),
+                                StudioButton(
+                                  ghost: true,
+                                  onPressed: busy || deletingResults
+                                      ? null
+                                      : () async {
+                                          try {
+                                            await SharePlus.instance.share(
+                                              ShareParams(
+                                                files: [XFile(file.path)],
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            message(
+                                              tr('couldNotShare', [
+                                                errorText(e),
+                                              ]),
+                                            );
+                                          }
+                                        },
+                                  icon: Icon(Icons.share_outlined),
+                                  child: Text(tr('share')),
+                                ),
+                                IconButton(
+                                  tooltip: tr('saveFileToAnotherLocation'),
+                                  onPressed: busy || saving || deletingResults
+                                      ? null
+                                      : () => _saveToFolder(file),
+                                  icon: Icon(Icons.folder_copy_outlined),
+                                ),
+                                IconButton(
+                                  tooltip: tr('deleteResult'),
+                                  onPressed: busy || saving || deletingResults
+                                      ? null
+                                      : () => _deleteResults([file]),
+                                  icon: Icon(Icons.delete_outline),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ],
         );
 }
 

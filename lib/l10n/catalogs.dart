@@ -221,6 +221,18 @@ const translations = {
     "mascotCompleted": "Created {0} result(s). View them in Results.",
     "mascotPartial":
         "Created {0} result(s); {1} video(s) failed. Check each file’s status.",
+    "selectResults": "Select files",
+    "selectedResultsCount": "{0} of {1} selected",
+    "clearResultSelection": "Clear selection",
+    "selectAllResults": "Select all",
+    "deleteSelected": "Delete selected",
+    "deletingResults": "Deleting…",
+    "deleteSelectedResults": "Delete {0} selected file(s)?",
+    "deleteResultsScope":
+        "Deletes app results permanently. Original videos and copies saved to the gallery or other folders are kept.",
+    "resultsDeleted": "Deleted {0} file(s).",
+    "resultsDeletePartial":
+        "Deleted {0} file(s). Could not delete {1}; please retry.",
   },
   "ko": {
     "preview": "미리보기 · {0}",
@@ -406,6 +418,17 @@ const translations = {
     "nativeUnknown": "기기 작업을 완료하지 못했습니다. 다시 시도하세요.",
     "mascotCompleted": "결과 {0}개를 만들었어요. 결과 화면에서 확인하세요.",
     "mascotPartial": "결과 {0}개 생성 · 영상 {1}개 처리 실패. 파일별 상태를 확인하세요.",
+    "selectResults": "파일 선택",
+    "selectedResultsCount": "전체 {1}개 중 {0}개 선택",
+    "clearResultSelection": "선택 해제",
+    "selectAllResults": "전체 선택",
+    "deleteSelected": "선택 삭제",
+    "deletingResults": "삭제 중…",
+    "deleteSelectedResults": "선택한 파일 {0}개를 삭제할까요?",
+    "deleteResultsScope":
+        "앱의 결과 파일을 영구 삭제합니다. 원본 영상과 갤러리 또는 다른 폴더에 저장한 복사본은 유지됩니다.",
+    "resultsDeleted": "파일 {0}개를 삭제했습니다.",
+    "resultsDeletePartial": "파일 {0}개를 삭제했습니다. {1}개는 삭제하지 못했습니다. 다시 시도해 주세요.",
   },
   "ja": {
     "preview": "プレビュー · {0}",
@@ -583,5 +606,16 @@ const translations = {
     "nativeUnknown": "端末での操作を完了できませんでした。再試行してください。",
     "mascotCompleted": "{0}件の結果を生成しました。結果画面で確認できます。",
     "mascotPartial": "{0}件を生成、{1}本の動画で失敗しました。各ファイルの状態を確認してください。",
+    "selectResults": "ファイルを選択",
+    "selectedResultsCount": "全{1}件中{0}件を選択",
+    "clearResultSelection": "選択を解除",
+    "selectAllResults": "すべて選択",
+    "deleteSelected": "選択したファイルを削除",
+    "deletingResults": "削除中…",
+    "deleteSelectedResults": "選択した{0}件のファイルを削除しますか？",
+    "deleteResultsScope":
+        "アプリ内の結果ファイルを完全に削除します。元の動画とギャラリーや他のフォルダーに保存したコピーは保持されます。",
+    "resultsDeleted": "{0}件のファイルを削除しました。",
+    "resultsDeletePartial": "{0}件を削除しました。{1}件は削除できませんでした。もう一度お試しください。",
   },
 };

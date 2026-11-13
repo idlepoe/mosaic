@@ -165,5 +165,15 @@
   "nativePick": "동영상을 선택하지 못했습니다. 다른 갤러리 앱이나 파일 선택을 사용하세요.",
   "nativeUnknown": "기기 작업을 완료하지 못했습니다. 다시 시도하세요.",
   "mascotCompleted": "결과 {0}개를 만들었어요. 결과 화면에서 확인하세요.",
-  "mascotPartial": "결과 {0}개 생성 · 영상 {1}개 처리 실패. 파일별 상태를 확인하세요."
+  "mascotPartial": "결과 {0}개 생성 · 영상 {1}개 처리 실패. 파일별 상태를 확인하세요.",
+  "selectResults": "파일 선택",
+  "selectedResultsCount": "전체 {1}개 중 {0}개 선택",
+  "clearResultSelection": "선택 해제",
+  "selectAllResults": "전체 선택",
+  "deleteSelected": "선택 삭제",
+  "deletingResults": "삭제 중…",
+  "deleteSelectedResults": "선택한 파일 {0}개를 삭제할까요?",
+  "deleteResultsScope": "앱의 결과 파일을 영구 삭제합니다. 원본 영상과 갤러리 또는 다른 폴더에 저장한 복사본은 유지됩니다.",
+  "resultsDeleted": "파일 {0}개를 삭제했습니다.",
+  "resultsDeletePartial": "파일 {0}개를 삭제했습니다. {1}개는 삭제하지 못했습니다. 다시 시도해 주세요."
 }

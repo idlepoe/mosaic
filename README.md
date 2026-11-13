@@ -169,6 +169,10 @@ The Dart processing implementation follows the original application's four-outpu
 5. Open **Results** (`결과`) to preview the files. Tap an image to enlarge it; animated images play in the preview.
 6. Tap **Save to gallery** (`갤러리 저장`) to create a copy in the **Mosaic** album. Images and animations are stored under `Pictures/Mosaic`; WebM video previews use `Movies/Mosaic`. The folder icon opens the optional document export dialog, and **Share** (`공유`) opens the share sheet.
 
+7. To remove several app results, tap **Select files** (`파일 선택`) on **Results**, check the files, then tap **Delete selected** (`선택 삭제`). **Select all** / **Clear selection** toggles the whole list. Long-pressing an image also enters selection mode. Confirm the file count before deletion. Original videos and copies already saved to the gallery or another folder are kept. Failed deletions remain selected for retry; individual delete buttons are still available outside selection mode.
+
+See the [bulk deletion verification report](docs/RESULTS_DELETION_QA.md) for physical-device screenshots and test coverage.
+
 Android 13+ uses the system Photo Picker. Earlier Android versions use the available gallery picker; if none is available, the system document picker is used. Android 10+ gallery saving uses scoped MediaStore without broad storage permission. Android 7–9 requests storage permission when saving. Gallery apps vary in animated WebP, GIF, and WebM playback support; the original output can always be exported as a file.
 
 ### Storage and privacy

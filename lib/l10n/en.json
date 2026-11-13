@@ -165,5 +165,15 @@
   "nativePick": "Could not select a video. Try another gallery app or select a file.",
   "nativeUnknown": "Could not complete the device operation. Please try again.",
   "mascotCompleted": "Created {0} result(s). View them in Results.",
-  "mascotPartial": "Created {0} result(s); {1} video(s) failed. Check each file’s status."
+  "mascotPartial": "Created {0} result(s); {1} video(s) failed. Check each file’s status.",
+  "selectResults": "Select files",
+  "selectedResultsCount": "{0} of {1} selected",
+  "clearResultSelection": "Clear selection",
+  "selectAllResults": "Select all",
+  "deleteSelected": "Delete selected",
+  "deletingResults": "Deleting…",
+  "deleteSelectedResults": "Delete {0} selected file(s)?",
+  "deleteResultsScope": "Deletes app results permanently. Original videos and copies saved to the gallery or other folders are kept.",
+  "resultsDeleted": "Deleted {0} file(s).",
+  "resultsDeletePartial": "Deleted {0} file(s). Could not delete {1}; please retry."
 }
