@@ -233,6 +233,35 @@ const translations = {
     "resultsDeleted": "Deleted {0} file(s).",
     "resultsDeletePartial":
         "Deleted {0} file(s). Could not delete {1}; please retry.",
+    "checkForUpdates": "Check for updates",
+    "updateReleaseOnly":
+        "Updates are available in the release app. Development builds use a separate app ID and signing key.",
+    "updateCurrent": "Version {0} is up to date.",
+    "updateCheckFailed":
+        "Could not check for updates. Check your connection and try again.",
+    "updateClose": "Close",
+    "updateAvailable": "An update is available",
+    "updateLater": "Later",
+    "updateDownload": "Download APK",
+    "updateInstall": "Install update",
+    "updateVersions": "Installed: {0}\nLatest: {1}",
+    "updateSize": "Download: {0} MB",
+    "updateVerified":
+        "Download verified. Tap Install update to open Android’s installer.",
+    "updatePermissionHint":
+        "Allow updates from Mosaic in Android settings, then return here and tap Install update again.",
+    "updateInstallFailed":
+        "Could not install this update. The file must be a newer, correctly signed APK for this app. Try downloading again.",
+    "updateDownloadFailed":
+        "Download failed. Check your connection and free space, then retry.",
+    "updateInvalidRelease":
+        "This release has no valid update information. Please try again later.",
+    "updateNoCompatibleApk": "No APK compatible with this device is available.",
+    "updateNetworkError": "Could not connect to GitHub. Please try again.",
+    "updateCancelled": "Download cancelled.",
+    "updateVerificationFailed":
+        "The downloaded file did not pass verification. Please download it again.",
+    "updateChecking": "Checking…",
   },
   "ko": {
     "preview": "미리보기 · {0}",
@@ -429,6 +458,29 @@ const translations = {
         "앱의 결과 파일을 영구 삭제합니다. 원본 영상과 갤러리 또는 다른 폴더에 저장한 복사본은 유지됩니다.",
     "resultsDeleted": "파일 {0}개를 삭제했습니다.",
     "resultsDeletePartial": "파일 {0}개를 삭제했습니다. {1}개는 삭제하지 못했습니다. 다시 시도해 주세요.",
+    "checkForUpdates": "업데이트 확인",
+    "updateReleaseOnly": "업데이트는 배포용 앱에서 사용할 수 있습니다. 개발용 앱은 앱 식별자와 서명키가 다릅니다.",
+    "updateCurrent": "현재 버전 {0}은 최신 버전입니다.",
+    "updateCheckFailed": "업데이트를 확인하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.",
+    "updateClose": "닫기",
+    "updateAvailable": "새로운 업데이트가 있습니다",
+    "updateLater": "나중에",
+    "updateDownload": "APK 다운로드",
+    "updateInstall": "업데이트 설치",
+    "updateVersions": "현재 버전: {0}\n최신 버전: {1}",
+    "updateSize": "다운로드: {0} MB",
+    "updateVerified": "다운로드 검증이 완료되었습니다. 업데이트 설치를 누르면 Android 설치 화면이 열립니다.",
+    "updatePermissionHint":
+        "Android 설정에서 Mosaic의 앱 설치를 허용한 뒤 돌아와 업데이트 설치를 다시 눌러 주세요.",
+    "updateInstallFailed":
+        "업데이트를 설치하지 못했습니다. 이 앱과 서명키가 같고 버전이 더 높은 APK가 필요합니다. 다시 다운로드해 주세요.",
+    "updateDownloadFailed": "다운로드하지 못했습니다. 연결과 저장 공간을 확인하고 다시 시도해 주세요.",
+    "updateInvalidRelease": "이 배포에는 올바른 업데이트 정보가 없습니다. 나중에 다시 시도해 주세요.",
+    "updateNoCompatibleApk": "이 기기와 호환되는 APK가 없습니다.",
+    "updateNetworkError": "GitHub에 연결하지 못했습니다. 다시 시도해 주세요.",
+    "updateCancelled": "다운로드를 취소했습니다.",
+    "updateVerificationFailed": "다운로드한 파일의 검증에 실패했습니다. 다시 다운로드해 주세요.",
+    "updateChecking": "확인 중…",
   },
   "ja": {
     "preview": "プレビュー · {0}",
@@ -617,5 +669,28 @@ const translations = {
         "アプリ内の結果ファイルを完全に削除します。元の動画とギャラリーや他のフォルダーに保存したコピーは保持されます。",
     "resultsDeleted": "{0}件のファイルを削除しました。",
     "resultsDeletePartial": "{0}件を削除しました。{1}件は削除できませんでした。もう一度お試しください。",
+    "checkForUpdates": "更新を確認",
+    "updateReleaseOnly": "更新はリリース版で利用できます。開発版はアプリIDと署名鍵が異なります。",
+    "updateCurrent": "バージョン{0}は最新です。",
+    "updateCheckFailed": "更新を確認できませんでした。接続を確認して再試行してください。",
+    "updateClose": "閉じる",
+    "updateAvailable": "更新があります",
+    "updateLater": "後で",
+    "updateDownload": "APKをダウンロード",
+    "updateInstall": "更新をインストール",
+    "updateVersions": "現在: {0}\n最新: {1}",
+    "updateSize": "ダウンロード: {0} MB",
+    "updateVerified": "ダウンロードを検証しました。更新をインストールを押すとAndroidのインストーラーが開きます。",
+    "updatePermissionHint":
+        "Androidの設定でMosaicからのアプリのインストールを許可し、戻って更新をインストールをもう一度押してください。",
+    "updateInstallFailed":
+        "更新をインストールできませんでした。同じ署名鍵で署名された新しいバージョンのAPKが必要です。再度ダウンロードしてください。",
+    "updateDownloadFailed": "ダウンロードできませんでした。接続と空き容量を確認して再試行してください。",
+    "updateInvalidRelease": "このリリースには有効な更新情報がありません。後でもう一度お試しください。",
+    "updateNoCompatibleApk": "この端末に対応するAPKがありません。",
+    "updateNetworkError": "GitHubに接続できませんでした。再試行してください。",
+    "updateCancelled": "ダウンロードをキャンセルしました。",
+    "updateVerificationFailed": "ファイルの検証に失敗しました。再度ダウンロードしてください。",
+    "updateChecking": "確認中…",
   },
 };

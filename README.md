@@ -1,8 +1,18 @@
 # Mosaic Android
 
-An Android app built with Flutter that creates video contact sheets, screenshots, animated previews, and animated contact sheets directly on your phone. Videos are processed locally with bundled FFmpeg and FFprobe libraries; no server, account, or separate command-line tool installation is required. The current app interface is in Korean.
+An Android app built with Flutter that creates video contact sheets, screenshots, animated previews, and animated contact sheets directly on your phone. Videos are processed locally with bundled FFmpeg and FFprobe libraries; no server, account, or separate command-line tool installation is required. The interface supports Korean, English and Japanese.
 
-**[Published releases](https://github.com/idlepoe/mosaic/releases)** · Current version: **1.4.0+9**
+**[Published releases](https://github.com/idlepoe/mosaic/releases)** · Current version: **1.4.1+10**
+
+## Version 1.4.1 updates
+
+App info now includes **Check for updates**. Release builds also check once per day
+at startup. A new-version dialog shows release notes and downloads the matching APK
+with progress, cancellation, SHA-256 verification and an Android installation button.
+See [update behavior and release metadata](docs/UPDATES.md).
+
+This release also includes multiple-result deletion, 30 FPS / 10-second animation
+settings, and the settings clipping fixes.
 
 ## Version 1.4 mascot screens and motion
 
@@ -109,7 +119,7 @@ Additional features include multiple-file selection, a sequential processing que
 
 ## Screenshots
 
-The current **1.4.0+9** settings separate conflicting modes and disable inapplicable controls:
+The current **1.4.1+10** settings separate conflicting modes and disable inapplicable controls:
 
 | Grouped settings | Automatic / manual modes | Output-specific controls |
 |:---:|:---:|:---:|
@@ -209,7 +219,7 @@ Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (approximately
 
 Release builds require an untracked `android/key.properties` containing `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. `storeFile` may point to a keystore outside this repository. The build fails if release signing is missing; it never falls back to debug signing. Both signing properties and keystore files are excluded from Git. Never commit signing credentials or attach them to a release.
 
-The current build is version **1.4.0+9** and uses the local release key configured using the same approach as the `gps_gallery` project. The earlier physical-device tests below used build **1.0.0+1** with development signing. Android cannot install the release-signed APK over that development-signed installation; use a fresh installation or a device already using the same release key. Preserve any needed app-private results before removing an older installation. Debug builds use a separate `.dev` application ID.
+The current build is version **1.4.1+10** and uses the local release key configured using the same approach as the `gps_gallery` project. The earlier physical-device tests below used build **1.0.0+1** with development signing. Android cannot install the release-signed APK over that development-signed installation; use a fresh installation or a device already using the same release key. Preserve any needed app-private results before removing an older installation. Debug builds use a separate `.dev` application ID.
 
 ## Project structure
 

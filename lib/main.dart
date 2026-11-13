@@ -1,4 +1,5 @@
 import 'ui/mascot.dart';
+import 'updates/update_dialog.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'ui/studio_theme.dart';
 import 'ui/studio_components.dart';
@@ -155,7 +156,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     } catch (_) {
       message(tr('couldNotLoadSettingsUsingDefaults'), pose: MascotPose.error);
     }
-    if (mounted) setState(() => ready = true);
+    if (mounted) {
+      setState(() => ready = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !busy && !saving) {
+          AppUpdater.check(
+            context,
+            automatic: true,
+            canShow: () => !busy && !saving && !deletingResults,
+          );
+        }
+      });
+    }
   }
 
   Future<void> _persist() async {
@@ -436,12 +448,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           IconButton(
             tooltip: tr('about'),
             icon: Icon(Icons.info_outline),
-            onPressed: () => showAboutDialog(
-              context: context,
-              applicationName: 'Mosaic Android',
-              applicationVersion: '1.4.0',
-              children: [Text(tr('aFlutterPortInspiredByMosaic'))],
-            ),
+            onPressed: _showAppInfo,
           ),
         ],
       ),
@@ -460,6 +467,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       ),
     ),
   );
+  Future<void> _showAppInfo() async {
+    var version = '1.4.1';
+    try {
+      version = (await AppUpdater.installed()).version;
+    } catch (_) {}
+    if (!mounted) return;
+    showAboutDialog(
+      context: context,
+      applicationName: 'Mosaic Android',
+      applicationVersion: version,
+      children: [
+        Text(tr('aFlutterPortInspiredByMosaic')),
+        const SizedBox(height: 16),
+        const UpdateCheckButton(),
+      ],
+    );
+  }
+
   Future<void> _chooseLanguage() async {
     final choice = await showDialog<String>(
       context: context,

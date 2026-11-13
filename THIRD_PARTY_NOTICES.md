@@ -36,3 +36,9 @@ with project-specific color tokens and responsive layout wrappers. The original
 web shadcn/ui JavaScript components are not executed inside this Flutter app.
 Resolved transitive dependencies and their versions are recorded in pubspec.lock;
 registered package license notices are available from the app's license page.
+
+## Dart crypto
+
+The update downloader uses the Dart team's `crypto` package (BSD-3-Clause) for
+streaming SHA-256 verification. Source: https://github.com/dart-lang/core/tree/main/pkgs/crypto
+Resolved version and registered license notices are included through Flutter.
