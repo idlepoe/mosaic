@@ -4,6 +4,15 @@ An Android app built with Flutter that creates video contact sheets, screenshots
 
 **[Published releases](https://github.com/idlepoe/mosaic/releases)** · Current version: **1.4.1+10**
 
+## Download on your phone
+
+[**Download the Android ARM64 APK (v1.4.1)**](https://github.com/idlepoe/mosaic/releases/download/v1.4.1/Mosaic-Android-v1.4.1-arm64.apk)
+
+Scan this QR code with your phone camera to open the APK download link.
+Open the downloaded APK and follow Android's installation prompts.
+
+<a href="https://github.com/idlepoe/mosaic/releases/download/v1.4.1/Mosaic-Android-v1.4.1-arm64.apk"><img src="docs/download/Mosaic-v1.4.1-Download-QR.png" width="280" alt="Scan to download Mosaic Android v1.4.1 APK"></a>
+
 ## Version 1.4.1 updates
 
 App info now includes **Check for updates**. Release builds also check once per day
