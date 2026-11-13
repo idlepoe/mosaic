@@ -51,7 +51,7 @@ void main() {
       await GlobalShadLocalizations.delegate.load(const Locale('en'));
       final settings = Settings()
         ..outputs = OutputKind.values.toSet()
-        ..fps = 15;
+        ..fps = 30;
       SharedPreferences.setMockInitialValues({
         'settings': jsonEncode(settings.toJson()),
       });
@@ -71,7 +71,7 @@ void main() {
       await tester.tap(find.text(tr('settings')));
       await tester.pumpAndSettle();
       final fps = find.byWidgetPredicate(
-        (w) => w is ShadSlider && w.min == 4 && w.max == 15,
+        (w) => w is ShadSlider && w.min == 4 && w.max == 30,
       );
 
       for (final end in [false, true]) {
@@ -82,7 +82,7 @@ void main() {
               : track.centerLeft + const Offset(1, 0),
         );
         await tester.pumpAndSettle();
-        expect(tester.widget<ShadSlider>(fps).initialValue, end ? 15 : 4);
+        expect(tester.widget<ShadSlider>(fps).initialValue, end ? 30 : 4);
         final circles = find.descendant(
           of: fps,
           matching: find.byWidgetPredicate(

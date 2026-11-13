@@ -78,7 +78,7 @@ Settings are divided into eight numbered groups. Inactive groups remain identifi
 | 3. Sheet arrangement | Sheets only. Automatic maximum count and direct row/column controls are exclusive and preserve each other's values. |
 | 4. Sampling and resolution | Shared by selected outputs. Temporal spacing is disabled when adaptive counts are off. |
 | 5. Static images | Static sheet/screenshots only. JPEG quality is disabled for lossless PNG. Screenshot count is independent of reel count. |
-| 6. Animation | Animated outputs only. Reel format/count are inactive when only animated sheets are selected. WebP quality does not apply to GIF/WebM. Clip duration and FPS are explicitly shared by animated outputs. |
+| 6. Animation | Animated outputs only. Reel format/count are inactive when only animated sheets are selected. WebP quality does not apply to GIF/WebM. Clip duration (0.5–10 seconds in 0.5-second steps) and FPS (4–30 in 1 FPS steps) are explicitly shared by animated outputs. |
 | 7. Labels and spacing | Timestamps, headers, gaps, and background are individually enabled only for outputs that use them. |
 | 8. Filenames | Shared output suffix. Existing result files are never overwritten. |
 

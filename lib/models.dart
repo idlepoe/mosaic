@@ -113,11 +113,11 @@ class Settings {
     s.reelCount = number('reelCount', oldCount, 1, 100);
     s.gridCount = number('gridCount', s.columns * s.rows, 1, 100);
     s.autoArrange = j['autoArrange'] as bool? ?? false;
-    s.fps = number('fps', 8, 4, 15);
+    s.fps = number('fps', 8, 4, 30);
     final oldQuality = number('quality', 85, 40, 100);
     s.jpegQuality = number('jpegQuality', oldQuality, 40, 100);
     s.webpQuality = number('webpQuality', oldQuality, 40, 100);
-    s.clipSeconds = ((j['clipSeconds'] as num?)?.toDouble() ?? 2).clamp(.5, 5);
+    s.clipSeconds = ((j['clipSeconds'] as num?)?.toDouble() ?? 2).clamp(.5, 10);
     s.sampleInterval = ((j['sampleInterval'] as num?)?.toDouble() ?? 2).clamp(
       .5,
       10,

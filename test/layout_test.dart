@@ -11,6 +11,34 @@ VideoMetadata duration(double n) => VideoMetadata(n, 1920, 1080, '', '', '');
 
 void main() {
   test(
+    '30 FPS and ten-second animation settings survive reload and enforce limits',
+    () {
+      final loaded = Settings.fromJson(
+        (Settings()
+              ..fps = 30
+              ..clipSeconds = 10)
+            .toJson(),
+      );
+      expect(loaded.fps, 30);
+      expect(loaded.clipSeconds, 10);
+      final beyond = Settings.fromJson({'fps': 60, 'clipSeconds': 20});
+      expect(beyond.fps, 30);
+      expect(beyond.clipSeconds, 10);
+      final previous = Settings.fromJson({'fps': 15, 'clipSeconds': 5});
+      expect(previous.fps, 15);
+      expect(previous.clipSeconds, 5);
+      for (final kind in [OutputKind.reel, OutputKind.animatedSheet]) {
+        final plan = SamplePlan.create(loaded, duration(35), kind);
+        expect(plan.clip, 10);
+        expect(plan.count, 3);
+        expect(plan.times.last + plan.clip, lessThanOrEqualTo(35));
+        final short = SamplePlan.create(loaded, duration(3), kind);
+        expect(short.clip, 3);
+        expect(short.times, [0.0]);
+      }
+    },
+  );
+  test(
     'content-fit portrait grids fill output width without outer gutters',
     () {
       final s = Settings()
